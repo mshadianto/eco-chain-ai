@@ -1,0 +1,7 @@
+{
+  "name": "ecochain-ai-marketplace",
+  "compatibility_date": "2026-02-24",
+  "assets": {
+    "directory": "./dist"
+  }
+}
