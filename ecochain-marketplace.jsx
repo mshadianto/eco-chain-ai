@@ -7,6 +7,11 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // Free Tier Architecture (Groq + Gemini + n8n + Supabase)
 // ═══════════════════════════════════════════════════════════════
 
+// ─── GEMINI VISION AI CONFIG ───
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_KEY || "";
+const GEMINI_MODEL = "gemini-2.0-flash-lite";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
 // ─── PRICE DATABASE (Digitized from Bank Sampah Document 02 Jan 2026) ───
 const WASTE_DB = {
   kertas: {
@@ -275,6 +280,88 @@ const getTxTotal = (items, margins) => items.reduce((sum, it) => {
   return sum + prices.user * it.w;
 }, 0);
 
+// ─── GEMINI VISION HELPERS ───
+const buildWastePrompt = () => {
+  let codes = "";
+  for (const [, cat] of Object.entries(WASTE_DB)) {
+    codes += `${cat.label.toUpperCase()}: ${cat.items.map(i => `${i.code}=${i.name}`).join(", ")}\n`;
+  }
+  return `Kamu adalah AI waste sorting assistant untuk Bank Sampah di Indonesia.
+Analisis foto ini dan identifikasi semua item sampah yang bisa dijual/didaur ulang.
+
+Klasifikasikan setiap item ke SALAH SATU kode berikut:
+${codes}
+Untuk setiap item berikan:
+- item: deskripsi singkat apa yang terlihat
+- code: kode dari daftar di atas (HARUS tepat cocok)
+- cat: kategori key (kertas/plastik/logam/impact/beling/elektronik/lainnya)
+- weight: estimasi berat dalam kg (berdasarkan ukuran visual)
+- tip: tips sorting untuk harga lebih tinggi dalam Bahasa Indonesia, atau null
+
+Format JSON:
+{"label":"deskripsi singkat tumpukan","results":[{"item":"...","code":"...","cat":"...","weight":0.0,"tip":"...atau null"}]}
+Jika tidak ada sampah: {"label":"Tidak terdeteksi","results":[]}`;
+};
+
+const resizeAndEncode = (file) => new Promise((resolve, reject) => {
+  const img = new Image();
+  img.onload = () => {
+    const MAX = 1024;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      const scale = Math.min(MAX / w, MAX / h);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+    }
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    c.getContext("2d").drawImage(img, 0, 0, w, h);
+    const dataUrl = c.toDataURL("image/jpeg", 0.7);
+    URL.revokeObjectURL(img.src);
+    resolve({ base64: dataUrl.split(",")[1], preview: dataUrl });
+  };
+  img.onerror = () => reject(new Error("Gagal memuat gambar"));
+  img.src = URL.createObjectURL(file);
+});
+
+const callGeminiVision = async (base64) => {
+  const res = await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [
+        { inline_data: { mime_type: "image/jpeg", data: base64 } },
+        { text: buildWastePrompt() },
+      ]}],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 1024, responseMimeType: "application/json" },
+    }),
+  });
+  if (!res.ok) throw new Error(`Gemini API ${res.status}`);
+  return res.json();
+};
+
+const parseGeminiResponse = (apiRes) => {
+  const text = apiRes?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) return null;
+  const data = JSON.parse(text);
+  const validResults = (data.results || [])
+    .filter(r => r.code && r.cat && typeof r.weight === "number" && r.weight > 0)
+    .map(r => {
+      const dbItem = findItem(r.code);
+      if (!dbItem) {
+        const catItems = WASTE_DB[r.cat]?.items;
+        if (catItems?.length) return { ...r, code: catItems[0].code };
+        return null;
+      }
+      return { ...r, weight: Math.round(r.weight * 10) / 10 };
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+  return validResults.length > 0
+    ? { label: data.label || "Hasil Scan AI", results: validResults }
+    : null;
+};
+
 // ─── ANIMATED NUMBER ───
 function Anim({ value, dur = 700 }) {
   const [d, setD] = useState(0);
@@ -320,6 +407,8 @@ export default function EcoChain() {
   const [scanning, setScanning] = useState(false);
   const [scanIdx, setScanIdx] = useState(0);
   const [scanResults, setScanResults] = useState(null);
+  const [scanError, setScanError] = useState(null);
+  const [scanPhoto, setScanPhoto] = useState(null);
   const [catFilter, setCatFilter] = useState("kertas");
   const [notif, setNotif] = useState(null);
   const [priceUpdating, setPriceUpdating] = useState(false);
@@ -328,6 +417,7 @@ export default function EcoChain() {
   const [showCascadeFor, setShowCascadeFor] = useState(null);
   const [dpDetail, setDpDetail] = useState(null);
   const chatEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const roles = [
     { id: "user", label: "End User", icon: "👤", sub: "Masyarakat", c: "#22C55E" },
@@ -342,15 +432,46 @@ export default function EcoChain() {
     setTimeout(() => setNotif(null), 3500);
   }, []);
 
-  const doScan = () => {
+  const doScan = () => { fileInputRef.current?.click(); };
+
+  const handleImageCapture = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setScanning(true);
     setScanResults(null);
-    setTimeout(() => {
+    setScanError(null);
+    setScanPhoto(null);
+    try {
+      const { base64, preview } = await resizeAndEncode(file);
+      setScanPhoto(preview);
+      if (!GEMINI_API_KEY) {
+        setTimeout(() => {
+          setScanning(false);
+          setScanResults(SCAN_SCENARIOS[scanIdx]);
+          setScanIdx(i => (i + 1) % SCAN_SCENARIOS.length);
+          flash("📷 Foto diambil! (Demo mode — API key belum dikonfigurasi)");
+        }, 1000);
+        e.target.value = "";
+        return;
+      }
+      const apiRes = await callGeminiVision(base64);
+      const parsed = parseGeminiResponse(apiRes);
+      if (parsed) {
+        setScanning(false);
+        setScanResults(parsed);
+        flash("🤖 Smart Waste Scout: Item terdeteksi!");
+      } else {
+        setScanning(false);
+        setScanError("Tidak ada sampah terdeteksi. Coba foto lebih dekat.");
+      }
+    } catch (err) {
+      console.error("Scan error:", err);
       setScanning(false);
       setScanResults(SCAN_SCENARIOS[scanIdx]);
       setScanIdx(i => (i + 1) % SCAN_SCENARIOS.length);
-      flash("🤖 Smart Waste Scout: Item terdeteksi!");
-    }, 2200);
+      flash("⚠️ AI unavailable — menampilkan demo");
+    }
+    e.target.value = "";
   };
 
   const doPriceUpdate = () => {
@@ -619,23 +740,28 @@ export default function EcoChain() {
           {/* SCAN TAB */}
           {tab === "scan" && (
             <div className="fu">
+              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleImageCapture} />
               <div className="card" style={{ padding: 28, textAlign: "center", position: "relative", overflow: "hidden", minHeight: 200 }}>
                 {scanning && <div style={{ position: "absolute", left: 0, right: 0, height: 3, background: "var(--green)", animation: "scanBeam 1.5s linear infinite", borderRadius: 2 }} />}
-                
+
                 {!scanResults ? (
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                    <div className={scanning ? "glow-green" : ""} style={{
-                      width: 72, height: 72, borderRadius: 18,
-                      background: scanning ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
-                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32,
-                      transition: "all 0.3s",
-                    }}>{scanning ? "🔍" : "📷"}</div>
+                    {scanning && scanPhoto ? (
+                      <img src={scanPhoto} alt="Captured" style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 16, border: "2px solid var(--green)", opacity: 0.8 }} />
+                    ) : (
+                      <div className={scanning ? "glow-green" : ""} style={{
+                        width: 72, height: 72, borderRadius: 18,
+                        background: scanning ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
+                        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32,
+                        transition: "all 0.3s",
+                      }}>{scanning ? "🔍" : "📷"}</div>
+                    )}
                     <div>
                       <h3 style={{ fontSize: 17, fontWeight: 700, fontFamily: "var(--display)", color: "var(--white)" }}>
-                        {scanning ? "Scanning..." : "Smart Waste Scout"}
+                        {scanning ? "Menganalisis foto..." : "Smart Waste Scout"}
                       </h3>
                       <p style={{ fontSize: 12, color: "var(--text2)", marginTop: 4, maxWidth: 360 }}>
-                        {scanning ? "Vision AI mendeteksi jenis sampah & estimasi berat" : "Foto tumpukan sampah → AI deteksi jenis, berat, dan estimasi nilai tukar"}
+                        {scanning ? "Gemini Vision AI mendeteksi jenis sampah & estimasi berat" : "Foto tumpukan sampah → AI deteksi jenis, berat, dan estimasi nilai tukar"}
                       </p>
                     </div>
                     {!scanning && (
@@ -645,15 +771,21 @@ export default function EcoChain() {
                         fontWeight: 700, fontSize: 14, letterSpacing: "-0.3px",
                       }}>📸 Ambil Foto Sampah</button>
                     )}
+                    {scanError && !scanning && (
+                      <div style={{ marginTop: 8, padding: "10px 16px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", fontSize: 12, color: "var(--red)" }}>
+                        {scanError}
+                      </div>
+                    )}
                     <div style={{ fontSize: 10, color: "var(--text2)", fontFamily: "var(--mono)" }}>
-                      Skenario: {SCAN_SCENARIOS[scanIdx].label}
+                      {GEMINI_API_KEY ? "Powered by Google Gemini Vision AI" : `Demo Mode — ${SCAN_SCENARIOS[scanIdx].label}`}
                     </div>
                   </div>
                 ) : (
                   <div style={{ textAlign: "left" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
                       <Badge color="var(--green)">🤖 SMART WASTE SCOUT</Badge>
                       <span style={{ fontSize: 11, color: "var(--text2)" }}>— {scanResults.label}</span>
+                      {!GEMINI_API_KEY && <Badge color="var(--yellow)" outline>DEMO</Badge>}
                     </div>
 
                     {scanResults.results.map((r, i) => {
@@ -713,9 +845,9 @@ export default function EcoChain() {
                         <button onClick={() => flash("📍 Navigasi ke Drop Point terdekat...")} className="btn" style={{
                           padding: "10px 18px", borderRadius: 10, background: "var(--green)", color: "#000", fontWeight: 700, fontSize: 12,
                         }}>📍 Antar ke DP</button>
-                        <button onClick={() => setScanResults(null)} className="btn" style={{
+                        <button onClick={() => { setScanResults(null); setScanPhoto(null); setScanError(null); }} className="btn" style={{
                           padding: "10px 18px", borderRadius: 10, background: "rgba(255,255,255,0.06)", color: "var(--text)", fontWeight: 600, fontSize: 12, border: "1px solid var(--border)",
-                        }}>Scan Ulang</button>
+                        }}>📸 Scan Ulang</button>
                       </div>
                     </div>
                   </div>
