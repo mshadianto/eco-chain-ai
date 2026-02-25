@@ -12,6 +12,11 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_KEY || "";
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
+// ─── GROQ CHAT AI CONFIG ───
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_KEY || "";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
 // ─── PRICE DATABASE (Digitized from Bank Sampah Document 02 Jan 2026) ───
 const WASTE_DB = {
   kertas: {
@@ -363,6 +368,67 @@ const parseGeminiResponse = (apiRes) => {
     : null;
 };
 
+// ─── GROQ CHAT SYSTEM PROMPT ───
+const buildChatSystemPrompt = (currentMargins) => {
+  let priceSummary = "";
+  for (const [, cat] of Object.entries(WASTE_DB)) {
+    const items = cat.items.map(i => `${i.name} Rp${i.price.toLocaleString("id-ID")}${i.unit ? `/${i.unit}` : "/kg"}`).join(", ");
+    priceSummary += `${cat.icon} ${cat.label}: ${items}\n`;
+  }
+
+  const dpList = NETWORK.dropPoints.map(dp =>
+    `- ${dp.name} (${dp.address}) — Operator: ${dp.operator}, Stok: ${dp.stock}/${dp.capacity}kg, Hari ini: ${dp.todayTx} tx`
+  ).join("\n");
+
+  const bsList = NETWORK.bankSampah.map(bs =>
+    `- ${bs.name} (${bs.address}) — Rating: ${bs.rating}/5, Jam: ${bs.hours}, Kapasitas: ${bs.monthlyCapacity}/bulan`
+  ).join("\n");
+
+  const plList = NETWORK.pelapak.map(pl =>
+    `- ${pl.name} (${pl.address}) — Terima: ${pl.accepts.join(", ")}`
+  ).join("\n");
+
+  const m = currentMargins;
+  const cascadeInfo = `Model Harga Cascade (4 level):
+- Pelapak (harga dasar/pasar)
+- Bank Sampah: Pelapak × ${((1 - m.pelapakToBank) * 100).toFixed(0)}% (margin ${(m.pelapakToBank * 100).toFixed(0)}%)
+- Drop Point: Bank × ${((1 - m.bankToDropPoint) * 100).toFixed(0)}% (margin ${(m.bankToDropPoint * 100).toFixed(0)}%)
+- End User dapat: Drop Point × ${((1 - m.dropPointToUser) * 100).toFixed(0)}% (margin ${(m.dropPointToUser * 100).toFixed(0)}%)
+Harga di database adalah harga PELAPAK. Untuk hitung harga user, kalikan cascade.`;
+
+  return `Kamu adalah EcoChain Assistant, asisten AI untuk marketplace ekonomi sirkular sampah di area Pondok Aren, Tangerang Selatan, Indonesia.
+
+PERAN:
+- Kamu membantu masyarakat, pengelola drop point, bank sampah, dan pelapak.
+- Kamu ahli dalam harga sampah daur ulang, lokasi pengumpulan, dan tips sorting.
+- Jawab selalu dalam Bahasa Indonesia yang ramah dan informatif.
+- Gunakan emoji secukupnya untuk keramahan.
+- Jika ditanya hal di luar topik sampah/daur ulang, arahkan kembali dengan sopan.
+
+HARGA SAMPAH TERKINI (harga level Pelapak per kg, kecuali tertulis lain):
+${priceSummary}
+${cascadeInfo}
+
+Contoh: Kardus harga pelapak Rp1.500/kg → User dapat ~Rp${CASCADE(1500, m).user}/kg
+
+DROP POINT AKTIF:
+${dpList}
+
+BANK SAMPAH:
+${bsList}
+
+PELAPAK / OFFTAKER:
+${plList}
+
+TIPS PENTING:
+- Botol plastik bersih (lepas label) = Rp3.100/kg, kotor = Rp1.500/kg — selisih besar!
+- Tembaga adalah item paling bernilai (Rp80.000/kg level pelapak)
+- Minyak jelantah harus disaring, jangan campur air
+- Pisahkan sampah per kategori untuk harga maksimal
+
+Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu tampilkan harga level USER (setelah cascade), bukan harga pelapak, kecuali diminta spesifik.`;
+};
+
 // ─── ANIMATED NUMBER ───
 function Anim({ value, dur = 700 }) {
   const [d, setD] = useState(0);
@@ -415,6 +481,7 @@ export default function EcoChain() {
   const [priceUpdating, setPriceUpdating] = useState(false);
   const [aiChat, setAiChat] = useState([]);
   const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const [showCascadeFor, setShowCascadeFor] = useState(null);
   const [dpDetail, setDpDetail] = useState(null);
   const chatEndRef = useRef(null);
@@ -484,40 +551,91 @@ export default function EcoChain() {
     }, 3000);
   };
 
-  // AI Chat simulation
-  const sendChat = () => {
-    if (!chatInput.trim()) return;
-    const q = chatInput.trim();
+  // AI Chat — Groq Llama 3 with demo fallback
+  const sendChat = async (directQuery) => {
+    const q = (directQuery || chatInput).trim();
+    if (!q || chatLoading) return;
     setChatInput("");
     setAiChat(prev => [...prev, { role: "user", text: q }]);
-    
-    setTimeout(() => {
-      let response = "";
-      const ql = q.toLowerCase();
-      if (ql.includes("harga") && ql.includes("kardus")) {
-        const p = CASCADE(1500, margins);
-        response = `📦 Harga Kardus saat ini:\n• Pelapak: ${rp(p.pelapak)}/kg\n• Bank Sampah: ${rp(p.bank)}/kg\n• Drop Point beli: ${rp(p.dropPoint)}/kg\n• User dapat: ${rp(p.user)}/kg\n\nDi Drop Point terdekat (Jl. H. Saan Tumpang), stok kardus masih bisa ditampung.`;
-      } else if (ql.includes("drop point") || ql.includes("terdekat")) {
-        response = `📍 4 Drop Point aktif di area Pondok Aren:\n\n1. Jl. H. Saan Tumpang (Pak Ahmad)\n   Stok: 67/100 kg • Hari ini: 8 transaksi\n\n2. Pondok Kacang Barat (Bang Roni)\n   Stok: 43/80 kg • Hari ini: 5 transaksi\n\n3. Peduli Bersih Hijau (PBH)\n   Blk. C5 No.16, Pd. Aren • Stok: 35/70 kg\n\n4. Drop Point Parigi Baru\n   Gang Bari II, Parigi Baru • Stok: 28/60 kg\n\nSemua BUKA sekarang. Yang paling dekat dari Kertabumi adalah DP2 (300m).`;
-      } else if (ql.includes("jelantah") || ql.includes("minyak")) {
-        const p = CASCADE(5700, margins);
-        response = `🫗 Minyak Jelantah — salah satu item paling menguntungkan!\n\nHarga user: ${rp(p.user)}/kg\nTips: Saring dulu & jangan campur air agar harga maksimal.\n\nDrop Point Jl. H. Saan Tumpang masih terima — sudah ada 14kg pending dari Bang Udin hari ini.`;
-      } else if (ql.includes("tembaga") || ql.includes("mahal")) {
-        const p = CASCADE(80000, margins);
-        response = `🏆 Top 3 Item Paling Bernilai:\n\n1. Tembaga: ${rp(p.user)}/kg (WOW!)\n2. Kuningan: ${rp(CASCADE(40000, margins).user)}/kg\n3. Alumunium: ${rp(CASCADE(11000, margins).user)}/kg\n\nBahkan kabel bekas yang mengandung tembaga bisa sangat bernilai. Pisahkan dari plastik pembungkusnya!`;
-      } else if (ql.includes("kertabumi")) {
-        response = `🏦 Kertabumi Recycling Center\n📍 Gg. Beben No.84, Pondok Kacang Barat\n⭐ Rating 4.5 (26 reviews)\n📞 +62 812-8847-7948\n🌐 kertabumi.org\n⏰ Sen-Jum 09:00-17:00\n\nSpesialisasi daur ulang plastik + edukasi. Hanya 300m dari Drop Point 2!\nKapasitas bulanan: ~2 ton.`;
-      } else if (ql.includes("teratai")) {
-        response = `🏦 Bank Sampah Teratai\n📍 Jl. Kutilang No.D. I/57, RT.5/RW.4, Pd. Pucung\n⭐ Rating 4.0 (12 reviews)\n⏰ Sen-Sab 08:00-15:00\n\nBank sampah komunitas kelurahan Pondok Pucung. Dekat dengan Bank Sampah Kasuari.\nKapasitas bulanan: ~1.2 ton.`;
-      } else if (ql.includes("pbh") || ql.includes("peduli bersih") || ql.includes("peduli")) {
-        response = `📍 Peduli Bersih Hijau (PBH)\n📍 Blk. C5 No.16, Pd. Aren, Kec. Pd. Aren\nTipe: Komunitas • Status: Aktif\nStok: 35/70 kg • Hari ini: 3 transaksi\n\nDrop point berbasis komunitas di kelurahan Pondok Aren. Terima berbagai jenis sampah termasuk kardus, botol bersih, dan plastik.`;
-      } else if (ql.includes("parigi")) {
-        response = `📍 Drop Point Parigi Baru\n📍 Gang Bari II, Parigi Baru, Kec. Pd. Aren\nTipe: Warung / Rumahan • Status: Aktif\nStok: 28/60 kg • Hari ini: 4 transaksi\n\nDrop point di area Parigi Baru. Terima kardus, besi, dan botol bersih.`;
-      } else {
-        response = `Saya bisa bantu dengan:\n• Cek harga item spesifik (misal: "harga kardus")\n• Info drop point terdekat (4 lokasi aktif)\n• Rekomendasi item paling menguntungkan\n• Info Bank Sampah (misal: "kertabumi", "teratai")\n• Info Drop Point (misal: "PBH", "parigi")\n\nKetik pertanyaan Anda! 🤖`;
+
+    // ─── FALLBACK: Demo mode when no API key ───
+    if (!GROQ_API_KEY) {
+      setChatLoading(true);
+      setTimeout(() => {
+        let response = "";
+        const ql = q.toLowerCase();
+        if (ql.includes("harga") && ql.includes("kardus")) {
+          const p = CASCADE(1500, margins);
+          response = `📦 Harga Kardus saat ini:\n• Pelapak: ${rp(p.pelapak)}/kg\n• Bank Sampah: ${rp(p.bank)}/kg\n• Drop Point beli: ${rp(p.dropPoint)}/kg\n• User dapat: ${rp(p.user)}/kg\n\nDi Drop Point terdekat (Jl. H. Saan Tumpang), stok kardus masih bisa ditampung.`;
+        } else if (ql.includes("drop point") || ql.includes("terdekat")) {
+          response = `📍 4 Drop Point aktif di area Pondok Aren:\n\n1. Jl. H. Saan Tumpang (Pak Ahmad)\n   Stok: 67/100 kg • Hari ini: 8 transaksi\n\n2. Pondok Kacang Barat (Bang Roni)\n   Stok: 43/80 kg • Hari ini: 5 transaksi\n\n3. Peduli Bersih Hijau (PBH)\n   Blk. C5 No.16, Pd. Aren • Stok: 35/70 kg\n\n4. Drop Point Parigi Baru\n   Gang Bari II, Parigi Baru • Stok: 28/60 kg\n\nSemua BUKA sekarang. Yang paling dekat dari Kertabumi adalah DP2 (300m).`;
+        } else if (ql.includes("jelantah") || ql.includes("minyak")) {
+          const p = CASCADE(5700, margins);
+          response = `🫗 Minyak Jelantah — salah satu item paling menguntungkan!\n\nHarga user: ${rp(p.user)}/kg\nTips: Saring dulu & jangan campur air agar harga maksimal.\n\nDrop Point Jl. H. Saan Tumpang masih terima — sudah ada 14kg pending dari Bang Udin hari ini.`;
+        } else if (ql.includes("tembaga") || ql.includes("mahal")) {
+          const p = CASCADE(80000, margins);
+          response = `🏆 Top 3 Item Paling Bernilai:\n\n1. Tembaga: ${rp(p.user)}/kg (WOW!)\n2. Kuningan: ${rp(CASCADE(40000, margins).user)}/kg\n3. Alumunium: ${rp(CASCADE(11000, margins).user)}/kg\n\nBahkan kabel bekas yang mengandung tembaga bisa sangat bernilai. Pisahkan dari plastik pembungkusnya!`;
+        } else if (ql.includes("kertabumi")) {
+          response = `🏦 Kertabumi Recycling Center\n📍 Gg. Beben No.84, Pondok Kacang Barat\n⭐ Rating 4.5 (26 reviews)\n📞 +62 812-8847-7948\n🌐 kertabumi.org\n⏰ Sen-Jum 09:00-17:00\n\nSpesialisasi daur ulang plastik + edukasi. Hanya 300m dari Drop Point 2!\nKapasitas bulanan: ~2 ton.`;
+        } else if (ql.includes("teratai")) {
+          response = `🏦 Bank Sampah Teratai\n📍 Jl. Kutilang No.D. I/57, RT.5/RW.4, Pd. Pucung\n⭐ Rating 4.0 (12 reviews)\n⏰ Sen-Sab 08:00-15:00\n\nBank sampah komunitas kelurahan Pondok Pucung. Dekat dengan Bank Sampah Kasuari.\nKapasitas bulanan: ~1.2 ton.`;
+        } else if (ql.includes("pbh") || ql.includes("peduli bersih") || ql.includes("peduli")) {
+          response = `📍 Peduli Bersih Hijau (PBH)\n📍 Blk. C5 No.16, Pd. Aren, Kec. Pd. Aren\nTipe: Komunitas • Status: Aktif\nStok: 35/70 kg • Hari ini: 3 transaksi\n\nDrop point berbasis komunitas di kelurahan Pondok Aren. Terima berbagai jenis sampah termasuk kardus, botol bersih, dan plastik.`;
+        } else if (ql.includes("parigi")) {
+          response = `📍 Drop Point Parigi Baru\n📍 Gang Bari II, Parigi Baru, Kec. Pd. Aren\nTipe: Warung / Rumahan • Status: Aktif\nStok: 28/60 kg • Hari ini: 4 transaksi\n\nDrop point di area Parigi Baru. Terima kardus, besi, dan botol bersih.`;
+        } else {
+          response = `Saya bisa bantu dengan:\n• Cek harga item spesifik (misal: "harga kardus")\n• Info drop point terdekat (4 lokasi aktif)\n• Rekomendasi item paling menguntungkan\n• Info Bank Sampah (misal: "kertabumi", "teratai")\n• Info Drop Point (misal: "PBH", "parigi")\n\nKetik pertanyaan Anda! 🤖`;
+        }
+        setAiChat(prev => [...prev, { role: "ai", text: response }]);
+        setChatLoading(false);
+      }, 800);
+      return;
+    }
+
+    // ─── REAL API: Groq Llama 3 ───
+    setChatLoading(true);
+    try {
+      const systemPrompt = buildChatSystemPrompt(margins);
+      const historyMessages = [...aiChat, { role: "user", text: q }]
+        .slice(-20)
+        .map(msg => ({
+          role: msg.role === "ai" ? "assistant" : "user",
+          content: msg.text,
+        }));
+
+      const res = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          messages: [{ role: "system", content: systemPrompt }, ...historyMessages],
+          temperature: 0.7,
+          max_tokens: 1024,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.error?.message || `Groq API ${res.status}`);
       }
-      setAiChat(prev => [...prev, { role: "ai", text: response }]);
-    }, 800);
+
+      const data = await res.json();
+      const aiResponse = data.choices?.[0]?.message?.content;
+      if (!aiResponse) throw new Error("Empty response from Groq");
+
+      setAiChat(prev => [...prev, { role: "ai", text: aiResponse }]);
+    } catch (err) {
+      console.error("Groq chat error:", err);
+      setAiChat(prev => [...prev, {
+        role: "ai",
+        text: `⚠️ Maaf, terjadi gangguan koneksi AI.\n\n${err.message}\n\nSilakan coba lagi atau gunakan fitur lainnya.`,
+      }]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -956,7 +1074,9 @@ export default function EcoChain() {
                   <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg, var(--green), var(--cyan))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>EcoChain Assistant</div>
-                    <div style={{ fontSize: 10, color: "var(--green)" }}>● Online — RAG + Groq Llama 3</div>
+                    <div style={{ fontSize: 10, color: GROQ_API_KEY ? "var(--green)" : "var(--yellow)" }}>
+                      {GROQ_API_KEY ? "● Online — RAG + Groq Llama 3" : "● Demo Mode — API key belum dikonfigurasi"}
+                    </div>
                   </div>
                 </div>
                 
@@ -968,7 +1088,7 @@ export default function EcoChain() {
                       <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 16 }}>Tanya apa saja tentang sampah & harga!</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
                         {["Harga kardus?", "Drop point terdekat", "Item paling mahal?", "Info Kertabumi", "Info Teratai", "Info PBH"].map(q => (
-                          <button key={q} className="btn" onClick={() => { setChatInput(q); setTimeout(() => { setChatInput(""); setAiChat(p => [...p, { role: "user", text: q }]); setTimeout(() => sendChat(), 100); }, 50); }}
+                          <button key={q} className="btn" onClick={() => sendChat(q)}
                             style={{ padding: "8px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)", color: "var(--text)", fontSize: 11, fontWeight: 500 }}>
                             {q}
                           </button>
@@ -993,22 +1113,38 @@ export default function EcoChain() {
                       </div>
                     </div>
                   ))}
+                  {chatLoading && (
+                    <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-start", animation: "fadeUp 0.3s ease" }}>
+                      <div style={{
+                        padding: "12px 16px", borderRadius: 14, background: "var(--bg3)",
+                        border: "1px solid var(--border)", fontSize: 12, color: "var(--text2)",
+                      }}>
+                        <span style={{ animation: "pulse 1.5s infinite" }}>Mengetik...</span>
+                      </div>
+                    </div>
+                  )}
                   <div ref={chatEndRef} />
                 </div>
 
                 {/* Input */}
                 <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
                   <input value={chatInput} onChange={e => setChatInput(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && sendChat()}
+                    onKeyDown={e => e.key === "Enter" && !chatLoading && sendChat()}
                     placeholder="Tanya harga, lokasi, tips..."
+                    disabled={chatLoading}
                     style={{
                       flex: 1, padding: "10px 16px", borderRadius: 10, border: "1px solid var(--border)",
                       background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13,
                       fontFamily: "var(--font)", outline: "none",
+                      opacity: chatLoading ? 0.5 : 1,
                     }} />
-                  <button onClick={sendChat} className="btn" style={{
-                    padding: "10px 18px", borderRadius: 10, background: "var(--green)", color: "#000", fontWeight: 700, fontSize: 13,
-                  }}>Kirim</button>
+                  <button onClick={() => sendChat()} disabled={chatLoading} className="btn" style={{
+                    padding: "10px 18px", borderRadius: 10,
+                    background: chatLoading ? "var(--bg3)" : "var(--green)",
+                    color: chatLoading ? "var(--text2)" : "#000",
+                    fontWeight: 700, fontSize: 13,
+                    cursor: chatLoading ? "not-allowed" : "pointer",
+                  }}>{chatLoading ? "..." : "Kirim"}</button>
                 </div>
               </div>
             </div>
