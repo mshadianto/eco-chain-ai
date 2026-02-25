@@ -258,11 +258,11 @@ export default function EcoChain() {
     setLoading(true);
     try {
       const [pr, dp, bs, mc, cat] = await Promise.all([
-        sb.query("v_prices", "order=category.asc,item_code.asc", tk),
-        sb.query("drop_points", "order=id.asc", tk),
-        sb.query("bank_sampah", "order=id.asc", tk),
-        sb.query("margin_config", "id=eq.1", tk),
-        sb.query("waste_categories", "order=sort_order.asc", tk),
+        sb.query("v_prices", "order=category.asc,item_code.asc", tk).catch(() => []),
+        sb.query("drop_points", "order=id.asc", tk).catch(() => []),
+        sb.query("bank_sampah", "order=id.asc", tk).catch(() => []),
+        sb.query("margin_config", "id=eq.1", tk).catch(() => []),
+        sb.query("waste_categories", "order=sort_order.asc", tk).catch(() => []),
       ]);
       setPrices(pr || []);
       setDropPoints(dp || []);
@@ -274,8 +274,8 @@ export default function EcoChain() {
       // Load transactions + items if authenticated
       if (tk && tk !== SUPABASE_ANON_KEY) {
         const [tx, ti, pk] = await Promise.all([
-          sb.query("transactions", "order=created_at.desc&limit=30", tk),
-          sb.query("transaction_items", "order=id.asc", tk),
+          sb.query("transactions", "order=created_at.desc&limit=30", tk).catch(() => []),
+          sb.query("transaction_items", "order=id.asc", tk).catch(() => []),
           sb.query("pickup_schedules", "order=pickup_date.asc", tk).catch(() => []),
         ]);
         setTransactions(tx || []);
@@ -296,10 +296,10 @@ export default function EcoChain() {
         setLoading(true);
         try {
           const [pr, dp, bs, cat] = await Promise.all([
-            sb.query("v_prices", "order=category.asc,item_code.asc"),
-            sb.query("drop_points", "order=id.asc"),
-            sb.query("bank_sampah", "order=id.asc"),
-            sb.query("waste_categories", "order=sort_order.asc"),
+            sb.query("v_prices", "order=category.asc,item_code.asc").catch(() => []),
+            sb.query("drop_points", "order=id.asc").catch(() => []),
+            sb.query("bank_sampah", "order=id.asc").catch(() => []),
+            sb.query("waste_categories", "order=sort_order.asc").catch(() => []),
           ]);
           setPrices(pr || []);
           setDropPoints(dp || []);
@@ -325,11 +325,17 @@ export default function EcoChain() {
         if (res.error) throw new Error(res.error.message || res.msg || "Registrasi gagal");
         if (res.access_token) {
           const u = res.user || (await sb.getUser(res.access_token));
-          const p = await sb.query("profiles", `id=eq.${u.id}`, res.access_token);
+          let prof = null;
+          try {
+            const p = await sb.query("profiles", `id=eq.${u.id}&select=*`, res.access_token);
+            prof = p?.[0] || null;
+          } catch {
+            prof = { id: u.id, email: u.email || authForm.email, name: authForm.name || "User", role: authForm.role || "user" };
+          }
           setToken(res.access_token);
           setUser(u);
-          setProfile(p?.[0] || null);
-          localStorage.setItem("eco_session", JSON.stringify({ token: res.access_token, user: u, profile: p?.[0] }));
+          setProfile(prof);
+          localStorage.setItem("eco_session", JSON.stringify({ token: res.access_token, user: u, profile: prof }));
           loadData(res.access_token);
           flash("✅ Registrasi berhasil! Selamat datang.");
         } else {
@@ -339,14 +345,22 @@ export default function EcoChain() {
       } else {
         const res = await sb.signIn(authForm.email, authForm.password);
         if (res.error) throw new Error(res.error_description || res.error.message || "Login gagal");
+        if (!res.access_token) throw new Error("Login gagal — tidak ada token.");
         const u = res.user || (await sb.getUser(res.access_token));
-        const p = await sb.query("profiles", `id=eq.${u.id}`, res.access_token);
+        let prof = null;
+        try {
+          const p = await sb.query("profiles", `id=eq.${u.id}&select=*`, res.access_token);
+          prof = p?.[0] || null;
+        } catch {
+          // Profile query failed — use fallback from user metadata
+          prof = { id: u.id, email: u.email, name: u.user_metadata?.name || u.email?.split("@")[0] || "User", role: u.user_metadata?.role || "user" };
+        }
         setToken(res.access_token);
         setUser(u);
-        setProfile(p?.[0] || null);
-        localStorage.setItem("eco_session", JSON.stringify({ token: res.access_token, user: u, profile: p?.[0] }));
+        setProfile(prof);
+        localStorage.setItem("eco_session", JSON.stringify({ token: res.access_token, user: u, profile: prof }));
         loadData(res.access_token);
-        flash(`✅ Selamat datang, ${p?.[0]?.name || "User"}!`);
+        flash(`✅ Selamat datang, ${prof?.name || "User"}!`);
       }
     } catch (err) {
       setAuthError(err.message);
