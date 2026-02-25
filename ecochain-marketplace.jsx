@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createClient } from "@supabase/supabase-js";
 
 // ═══════════════════════════════════════════════════════════════
 // ECOCHAIN AI MARKETPLACE — Production Prototype
@@ -6,6 +7,13 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 // Cascading Price Model with RAG-Driven AI Agents
 // Free Tier Architecture (Groq + Gemini + n8n + Supabase)
 // ═══════════════════════════════════════════════════════════════
+
+// ─── SUPABASE CONFIG ───
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 // ─── GEMINI VISION AI CONFIG ───
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_KEY || "";
@@ -486,6 +494,19 @@ export default function EcoChain() {
   const [dpDetail, setDpDetail] = useState(null);
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const marginTimerRef = useRef(null);
+
+  // ─── AUTH STATE ───
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(!!supabase);
+  const [authScreen, setAuthScreen] = useState("login");
+  const [authForm, setAuthForm] = useState({ email: "", password: "", name: "", role: "user" });
+  const [authError, setAuthError] = useState("");
+  const [profile, setProfile] = useState(null);
+
+  // ─── SUPABASE DATA STATE ───
+  const [dbTransactions, setDbTransactions] = useState(null);
+  const transactions = dbTransactions || TRANSACTIONS;
 
   const roles = [
     { id: "user", label: "End User", icon: "👤", sub: "Masyarakat", c: "#22C55E" },
@@ -499,6 +520,138 @@ export default function EcoChain() {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 3500);
   }, []);
+
+  // ─── SUPABASE AUTH LIFECYCLE ───
+  const loadProfile = useCallback(async (userId) => {
+    if (!supabase) return;
+    const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+    if (data) {
+      setProfile(data);
+      setRole(data.role);
+      setTab(data.role === "user" ? "scan" : data.role === "dp" ? "scan" : data.role === "bank" ? "scan" : "scan");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s) loadProfile(s.user.id);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s) loadProfile(s.user.id);
+      else { setProfile(null); setRole("user"); setDbTransactions(null); }
+    });
+    return () => subscription.unsubscribe();
+  }, [loadProfile]);
+
+  const handleLogin = async () => {
+    setAuthError("");
+    const { error } = await supabase.auth.signInWithPassword({
+      email: authForm.email, password: authForm.password,
+    });
+    if (error) setAuthError(error.message);
+  };
+
+  const handleRegister = async () => {
+    setAuthError("");
+    if (!authForm.name.trim()) { setAuthError("Nama wajib diisi"); return; }
+    const { error } = await supabase.auth.signUp({
+      email: authForm.email, password: authForm.password,
+      options: { data: { name: authForm.name, role: authForm.role } },
+    });
+    if (error) setAuthError(error.message);
+    else { setAuthError(""); flash("Registrasi berhasil! Cek email untuk verifikasi."); }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSession(null); setProfile(null); setRole("user"); setDbTransactions(null);
+  };
+
+  // ─── LOAD TRANSACTIONS FROM SUPABASE ───
+  const loadTransactions = useCallback(async () => {
+    if (!supabase || !session) return;
+    const { data: txs } = await supabase
+      .from("transactions")
+      .select("id, user_name, drop_point_id, status, created_at, transaction_items ( waste_code, waste_name, weight_kg )")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (txs) {
+      const formatted = txs.map(tx => ({
+        id: tx.id,
+        date: new Date(tx.created_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }),
+        time: new Date(tx.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+        user: tx.user_name, dp: tx.drop_point_id,
+        items: (tx.transaction_items || []).map(it => ({ name: it.waste_name, w: parseFloat(it.weight_kg), code: it.waste_code })),
+        status: tx.status,
+      }));
+      setDbTransactions(formatted.length > 0 ? formatted : null);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    loadTransactions();
+    if (!supabase || !session) return;
+    const channel = supabase.channel("tx_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, () => loadTransactions())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [session, loadTransactions]);
+
+  // ─── MARGINS REALTIME ───
+  useEffect(() => {
+    if (!supabase || !session) return;
+    const loadMargins = async () => {
+      const { data } = await supabase.from("margin_config").select("*").eq("id", 1).single();
+      if (data) setMargins({
+        pelapakToBank: parseFloat(data.pelapak_to_bank),
+        bankToDropPoint: parseFloat(data.bank_to_drop_point),
+        dropPointToUser: parseFloat(data.drop_point_to_user),
+      });
+    };
+    loadMargins();
+    const channel = supabase.channel("margin_changes")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "margin_config", filter: "id=eq.1" }, (payload) => {
+        const d = payload.new;
+        setMargins({
+          pelapakToBank: parseFloat(d.pelapak_to_bank),
+          bankToDropPoint: parseFloat(d.bank_to_drop_point),
+          dropPointToUser: parseFloat(d.drop_point_to_user),
+        });
+        flash("Margin diperbarui secara realtime!", "info");
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [session, flash]);
+
+  const updateMargin = useCallback((key, value) => {
+    setMargins(prev => ({ ...prev, [key]: value }));
+    if (!supabase || !session) return;
+    clearTimeout(marginTimerRef.current);
+    marginTimerRef.current = setTimeout(() => {
+      const colMap = { pelapakToBank: "pelapak_to_bank", bankToDropPoint: "bank_to_drop_point", dropPointToUser: "drop_point_to_user" };
+      supabase.from("margin_config")
+        .update({ [colMap[key]]: value, updated_at: new Date().toISOString(), updated_by: session.user.id })
+        .eq("id", 1).then(({ error }) => { if (error) console.error("Margin update error:", error); });
+    }, 500);
+  }, [session]);
+
+  // ─── CREATE TRANSACTION (DP Cashier) ───
+  const createTransaction = useCallback(async (userName, dropPointId, items) => {
+    if (!supabase || !session) { flash("Transaksi dicatat! (Demo mode)"); return; }
+    const now = new Date();
+    const txId = `ECH-${String(now.getDate()).padStart(2, "0")}${String(now.getMonth() + 1).padStart(2, "0")}-${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`;
+    const { error: txErr } = await supabase.from("transactions")
+      .insert({ id: txId, user_id: session.user.id, user_name: userName, drop_point_id: dropPointId, status: "pending" });
+    if (txErr) { flash("Gagal: " + txErr.message, "info"); return; }
+    const { error: itErr } = await supabase.from("transaction_items")
+      .insert(items.map(it => ({ transaction_id: txId, waste_code: it.code, waste_name: it.name, weight_kg: it.w })));
+    if (itErr) { flash("Item gagal: " + itErr.message, "info"); return; }
+    flash("Transaksi " + txId + " berhasil dicatat!");
+  }, [session, flash]);
 
   const doScan = () => { fileInputRef.current?.click(); };
 
@@ -651,9 +804,9 @@ export default function EcoChain() {
     }, 0);
   }, [scanResults, margins]);
 
-  const allTxTotal = useMemo(() => 
-    TRANSACTIONS.reduce((s, tx) => s + getTxTotal(tx.items, margins), 0)
-  , [margins]);
+  const allTxTotal = useMemo(() =>
+    transactions.reduce((s, tx) => s + getTxTotal(tx.items, margins), 0)
+  , [margins, transactions]);
 
   // ─── CSS ───
   const CSS = `
@@ -742,6 +895,129 @@ export default function EcoChain() {
     );
   };
 
+  // ─── AUTH UI SCREEN ───
+  const AuthScreen = () => (
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      background: "var(--bg)", fontFamily: "var(--font)", padding: 20,
+    }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16, display: "inline-flex",
+            alignItems: "center", justifyContent: "center",
+            background: "linear-gradient(135deg, #22C55E, #06B6D4)",
+            fontSize: 28, fontWeight: 800, fontFamily: "var(--display)", color: "#000", marginBottom: 16,
+          }}>♻</div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, fontFamily: "var(--display)", color: "var(--white)", letterSpacing: "-0.5px" }}>
+            Eco<span style={{ color: "var(--green)" }}>Chain</span>
+            <span style={{ color: "var(--cyan)", fontSize: 18, fontStyle: "italic" }}> AI</span>
+          </h1>
+          <p style={{ fontSize: 12, color: "var(--text2)", marginTop: 4, fontFamily: "var(--mono)" }}>
+            Marketplace Ekonomi Sirkular Sampah
+          </p>
+        </div>
+        <div className="card fu" style={{ padding: 32 }}>
+          <div style={{ display: "flex", gap: 4, marginBottom: 24 }}>
+            {["login", "register"].map(s => (
+              <button key={s} className="btn" onClick={() => { setAuthScreen(s); setAuthError(""); }}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  background: authScreen === s ? "rgba(34,197,94,0.1)" : "transparent",
+                  color: authScreen === s ? "var(--green)" : "var(--text2)",
+                  border: `1px solid ${authScreen === s ? "rgba(34,197,94,0.25)" : "var(--border)"}`,
+                }}>
+                {s === "login" ? "Masuk" : "Daftar Baru"}
+              </button>
+            ))}
+          </div>
+          {authError && (
+            <div style={{
+              padding: "10px 14px", borderRadius: 10, marginBottom: 16,
+              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+              fontSize: 12, color: "var(--red)",
+            }}>{authError}</div>
+          )}
+          {authScreen === "register" && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>Nama</label>
+              <input value={authForm.name} onChange={e => setAuthForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="Nama lengkap" style={{
+                  width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--border)",
+                  background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13, fontFamily: "var(--font)", outline: "none",
+                }} />
+            </div>
+          )}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>Email</label>
+            <input type="email" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))}
+              placeholder="email@contoh.com" style={{
+                width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--border)",
+                background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13, fontFamily: "var(--font)", outline: "none",
+              }} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>Password</label>
+            <input type="password" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))}
+              placeholder="Minimal 6 karakter"
+              onKeyDown={e => e.key === "Enter" && (authScreen === "login" ? handleLogin() : handleRegister())}
+              style={{
+                width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--border)",
+                background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13, fontFamily: "var(--font)", outline: "none",
+              }} />
+          </div>
+          {authScreen === "register" && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 6, display: "block" }}>Peran</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {roles.map(r => (
+                  <button key={r.id} className="btn" onClick={() => setAuthForm(p => ({ ...p, role: r.id }))}
+                    style={{
+                      padding: "10px", borderRadius: 10, textAlign: "left",
+                      background: authForm.role === r.id ? `${r.c}10` : "rgba(255,255,255,0.02)",
+                      color: authForm.role === r.id ? r.c : "var(--text2)",
+                      border: `1px solid ${authForm.role === r.id ? `${r.c}30` : "var(--border)"}`,
+                      fontSize: 12, fontWeight: 600,
+                    }}>
+                    <span style={{ marginRight: 4 }}>{r.icon}</span>{r.label}
+                    <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{r.sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <button onClick={authScreen === "login" ? handleLogin : handleRegister}
+            className="btn" style={{
+              width: "100%", padding: "13px", borderRadius: 12,
+              background: "linear-gradient(135deg, #22C55E, #16A34A)", color: "#fff",
+              fontWeight: 700, fontSize: 14, letterSpacing: "-0.3px",
+            }}>
+            {authScreen === "login" ? "Masuk" : "Daftar"}
+          </button>
+        </div>
+        <div style={{ textAlign: "center", marginTop: 16, fontSize: 10, color: "var(--text2)", fontFamily: "var(--mono)" }}>
+          Pondok Aren, Tangerang Selatan
+        </div>
+      </div>
+    </div>
+  );
+
+  // ─── AUTH LOADING ───
+  if (authLoading) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#080C14", fontFamily: "'Sora', sans-serif" }}>
+      <style>{CSS}</style>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 36, marginBottom: 12, animation: "pulseGlow 2s ease infinite" }}>♻</div>
+        <div style={{ color: "#64748B", fontSize: 13 }}>Memuat EcoChain AI...</div>
+      </div>
+    </div>
+  );
+
+  // ─── AUTH GATE ───
+  if (!session && supabase) return (
+    <div><style>{CSS}</style><AuthScreen /></div>
+  );
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", fontFamily: "var(--font)", color: "var(--text)", position: "relative" }}>
       <style>{CSS}</style>
@@ -785,24 +1061,42 @@ export default function EcoChain() {
             </div>
           </div>
 
-          {/* Role Switch */}
-          <div style={{ display: "flex", gap: 3, background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 3 }}>
-            {roles.map(r => (
-              <button key={r.id} className="btn" onClick={() => {
-                setRole(r.id);
-                setTab(r.id === "user" ? "scan" : r.id === "dp" ? "cashier" : r.id === "bank" ? "overview" : "pricing");
-                setDpDetail(null);
-              }} style={{
+          {/* Role Switch / User Info */}
+          {session && profile ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{
                 padding: "7px 13px", borderRadius: 9,
-                background: role === r.id ? `${r.c}15` : "transparent",
-                color: role === r.id ? r.c : "var(--text2)",
-                fontWeight: 600, fontSize: 11,
-                border: role === r.id ? `1px solid ${r.c}30` : "1px solid transparent",
+                background: `${activeRole.c}15`, color: activeRole.c,
+                fontWeight: 600, fontSize: 11, border: `1px solid ${activeRole.c}30`,
               }}>
-                <span style={{ marginRight: 4 }}>{r.icon}</span>{r.label}
-              </button>
-            ))}
-          </div>
+                <span style={{ marginRight: 4 }}>{activeRole.icon}</span>{activeRole.label}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text2)" }}>{profile.name || profile.email}</div>
+              <button onClick={handleLogout} className="btn" style={{
+                padding: "6px 12px", borderRadius: 8,
+                background: "rgba(239,68,68,0.1)", color: "var(--red)",
+                fontSize: 10, fontWeight: 600, border: "1px solid rgba(239,68,68,0.2)",
+              }}>Keluar</button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 3, background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 3 }}>
+              {roles.map(r => (
+                <button key={r.id} className="btn" onClick={() => {
+                  setRole(r.id);
+                  setTab(r.id === "user" ? "scan" : r.id === "dp" ? "cashier" : r.id === "bank" ? "overview" : "pricing");
+                  setDpDetail(null);
+                }} style={{
+                  padding: "7px 13px", borderRadius: 9,
+                  background: role === r.id ? `${r.c}15` : "transparent",
+                  color: role === r.id ? r.c : "var(--text2)",
+                  fontWeight: 600, fontSize: 11,
+                  border: role === r.id ? `1px solid ${r.c}30` : "1px solid transparent",
+                }}>
+                  <span style={{ marginRight: 4 }}>{r.icon}</span>{r.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 
@@ -829,6 +1123,7 @@ export default function EcoChain() {
               {role === "pelapak" && "🤖 Price Setter — Upload harga pasar → AI cascade ke seluruh rantai"}
             </p>
           </div>
+          {!supabase && <Badge color="var(--yellow)" outline>DEMO</Badge>}
         </div>
 
         {/* ╔══════════════════════════════════════╗ */}
@@ -1162,9 +1457,9 @@ export default function EcoChain() {
                 <div style={{ fontSize: 36, fontWeight: 800, color: "var(--green)", fontFamily: "var(--display)", marginTop: 4 }}>
                   <Anim value={Math.round(allTxTotal)} dur={1000} />
                 </div>
-                <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 4 }}>{TRANSACTIONS.length} transaksi</div>
+                <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 4 }}>{transactions.length} transaksi</div>
               </div>
-              {TRANSACTIONS.map((tx, i) => {
+              {transactions.map((tx, i) => {
                 const total = getTxTotal(tx.items, margins);
                 return (
                   <div key={tx.id} className={`card fu${Math.min(i+1, 6)}`} style={{ padding: "14px 18px", marginBottom: 6 }}>
@@ -1362,7 +1657,7 @@ export default function EcoChain() {
                       <span className="mono" style={{ fontWeight: 700, color: s.c }}>{Math.round(margins[s.key]*100)}%</span>
                     </div>
                     <input type="range" min={5} max={40} value={margins[s.key]*100}
-                      onChange={e => setMargins(p => ({...p, [s.key]: +e.target.value/100}))}
+                      onChange={e => updateMargin(s.key, +e.target.value / 100)}
                       style={{ accentColor: s.c }} />
                   </div>
                 ))}
@@ -1375,7 +1670,7 @@ export default function EcoChain() {
             <h3 style={{ fontSize: 15, fontWeight: 700, fontFamily: "var(--display)", color: "var(--white)", marginBottom: 12 }}>
               📋 Transaksi Terkini
             </h3>
-            {TRANSACTIONS.map((tx, i) => {
+            {transactions.map((tx, i) => {
               const total = getTxTotal(tx.items, margins);
               const dp = NETWORK.dropPoints.find(d => d.id === tx.dp);
               return (
