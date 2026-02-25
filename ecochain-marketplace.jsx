@@ -347,13 +347,14 @@ const parseGeminiResponse = (apiRes) => {
   const validResults = (data.results || [])
     .filter(r => r.code && r.cat && typeof r.weight === "number" && r.weight > 0)
     .map(r => {
+      const cat = r.cat.toLowerCase();
       const dbItem = findItem(r.code);
       if (!dbItem) {
-        const catItems = WASTE_DB[r.cat]?.items;
-        if (catItems?.length) return { ...r, code: catItems[0].code };
+        const catItems = WASTE_DB[cat]?.items;
+        if (catItems?.length) return { ...r, cat, code: catItems[0].code };
         return null;
       }
-      return { ...r, weight: Math.round(r.weight * 10) / 10 };
+      return { ...r, cat, weight: Math.round(r.weight * 10) / 10 };
     })
     .filter(Boolean)
     .slice(0, 8);
