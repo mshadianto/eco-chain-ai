@@ -895,113 +895,6 @@ export default function EcoChain() {
     );
   };
 
-  // ─── AUTH UI SCREEN ───
-  const AuthScreen = () => (
-    <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "var(--bg)", fontFamily: "var(--font)", padding: 20,
-    }}>
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: 16, display: "inline-flex",
-            alignItems: "center", justifyContent: "center",
-            background: "linear-gradient(135deg, #22C55E, #06B6D4)",
-            fontSize: 28, fontWeight: 800, fontFamily: "var(--display)", color: "#000", marginBottom: 16,
-          }}>♻</div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, fontFamily: "var(--display)", color: "var(--white)", letterSpacing: "-0.5px" }}>
-            Eco<span style={{ color: "var(--green)" }}>Chain</span>
-            <span style={{ color: "var(--cyan)", fontSize: 18, fontStyle: "italic" }}> AI</span>
-          </h1>
-          <p style={{ fontSize: 12, color: "var(--text2)", marginTop: 4, fontFamily: "var(--mono)" }}>
-            Marketplace Ekonomi Sirkular Sampah
-          </p>
-        </div>
-        <div className="card fu" style={{ padding: 32 }}>
-          <div style={{ display: "flex", gap: 4, marginBottom: 24 }}>
-            {["login", "register"].map(s => (
-              <button key={s} className="btn" onClick={() => { setAuthScreen(s); setAuthError(""); }}
-                style={{
-                  flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 600,
-                  background: authScreen === s ? "rgba(34,197,94,0.1)" : "transparent",
-                  color: authScreen === s ? "var(--green)" : "var(--text2)",
-                  border: `1px solid ${authScreen === s ? "rgba(34,197,94,0.25)" : "var(--border)"}`,
-                }}>
-                {s === "login" ? "Masuk" : "Daftar Baru"}
-              </button>
-            ))}
-          </div>
-          {authError && (
-            <div style={{
-              padding: "10px 14px", borderRadius: 10, marginBottom: 16,
-              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
-              fontSize: 12, color: "var(--red)",
-            }}>{authError}</div>
-          )}
-          {authScreen === "register" && (
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>Nama</label>
-              <input value={authForm.name} onChange={e => setAuthForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="Nama lengkap" style={{
-                  width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--border)",
-                  background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13, fontFamily: "var(--font)", outline: "none",
-                }} />
-            </div>
-          )}
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>Email</label>
-            <input type="email" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))}
-              placeholder="email@contoh.com" style={{
-                width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--border)",
-                background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13, fontFamily: "var(--font)", outline: "none",
-              }} />
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>Password</label>
-            <input type="password" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))}
-              placeholder="Minimal 6 karakter"
-              onKeyDown={e => e.key === "Enter" && (authScreen === "login" ? handleLogin() : handleRegister())}
-              style={{
-                width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--border)",
-                background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13, fontFamily: "var(--font)", outline: "none",
-              }} />
-          </div>
-          {authScreen === "register" && (
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 6, display: "block" }}>Peran</label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                {roles.map(r => (
-                  <button key={r.id} className="btn" onClick={() => setAuthForm(p => ({ ...p, role: r.id }))}
-                    style={{
-                      padding: "10px", borderRadius: 10, textAlign: "left",
-                      background: authForm.role === r.id ? `${r.c}10` : "rgba(255,255,255,0.02)",
-                      color: authForm.role === r.id ? r.c : "var(--text2)",
-                      border: `1px solid ${authForm.role === r.id ? `${r.c}30` : "var(--border)"}`,
-                      fontSize: 12, fontWeight: 600,
-                    }}>
-                    <span style={{ marginRight: 4 }}>{r.icon}</span>{r.label}
-                    <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{r.sub}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <button onClick={authScreen === "login" ? handleLogin : handleRegister}
-            className="btn" style={{
-              width: "100%", padding: "13px", borderRadius: 12,
-              background: "linear-gradient(135deg, #22C55E, #16A34A)", color: "#fff",
-              fontWeight: 700, fontSize: 14, letterSpacing: "-0.3px",
-            }}>
-            {authScreen === "login" ? "Masuk" : "Daftar"}
-          </button>
-        </div>
-        <div style={{ textAlign: "center", marginTop: 16, fontSize: 10, color: "var(--text2)", fontFamily: "var(--mono)" }}>
-          Pondok Aren, Tangerang Selatan
-        </div>
-      </div>
-    </div>
-  );
-
   // ─── AUTH LOADING ───
   if (authLoading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#080C14", fontFamily: "'Sora', sans-serif" }}>
@@ -1015,7 +908,112 @@ export default function EcoChain() {
 
   // ─── AUTH GATE ───
   if (!session && supabase) return (
-    <div><style>{CSS}</style><AuthScreen /></div>
+    <div>
+      <style>{CSS}</style>
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--bg)", fontFamily: "var(--font)", padding: 20,
+      }}>
+        <div style={{ width: "100%", maxWidth: 420 }}>
+          <div style={{ textAlign: "center", marginBottom: 36 }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 16, display: "inline-flex",
+              alignItems: "center", justifyContent: "center",
+              background: "linear-gradient(135deg, #22C55E, #06B6D4)",
+              fontSize: 28, fontWeight: 800, fontFamily: "var(--display)", color: "#000", marginBottom: 16,
+            }}>♻</div>
+            <h1 style={{ fontSize: 28, fontWeight: 800, fontFamily: "var(--display)", color: "var(--white)", letterSpacing: "-0.5px" }}>
+              Eco<span style={{ color: "var(--green)" }}>Chain</span>
+              <span style={{ color: "var(--cyan)", fontSize: 18, fontStyle: "italic" }}> AI</span>
+            </h1>
+            <p style={{ fontSize: 12, color: "var(--text2)", marginTop: 4, fontFamily: "var(--mono)" }}>
+              Marketplace Ekonomi Sirkular Sampah
+            </p>
+          </div>
+          <div className="card fu" style={{ padding: 32 }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 24 }}>
+              {["login", "register"].map(s => (
+                <button key={s} className="btn" onClick={() => { setAuthScreen(s); setAuthError(""); }}
+                  style={{
+                    flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+                    background: authScreen === s ? "rgba(34,197,94,0.1)" : "transparent",
+                    color: authScreen === s ? "var(--green)" : "var(--text2)",
+                    border: `1px solid ${authScreen === s ? "rgba(34,197,94,0.25)" : "var(--border)"}`,
+                  }}>
+                  {s === "login" ? "Masuk" : "Daftar Baru"}
+                </button>
+              ))}
+            </div>
+            {authError && (
+              <div style={{
+                padding: "10px 14px", borderRadius: 10, marginBottom: 16,
+                background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+                fontSize: 12, color: "var(--red)",
+              }}>{authError}</div>
+            )}
+            {authScreen === "register" && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>Nama</label>
+                <input value={authForm.name} onChange={e => setAuthForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Nama lengkap" style={{
+                    width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--border)",
+                    background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13, fontFamily: "var(--font)", outline: "none",
+                  }} />
+              </div>
+            )}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>Email</label>
+              <input type="email" value={authForm.email} onChange={e => setAuthForm(p => ({ ...p, email: e.target.value }))}
+                placeholder="email@contoh.com" style={{
+                  width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--border)",
+                  background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13, fontFamily: "var(--font)", outline: "none",
+                }} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>Password</label>
+              <input type="password" value={authForm.password} onChange={e => setAuthForm(p => ({ ...p, password: e.target.value }))}
+                placeholder="Minimal 6 karakter"
+                onKeyDown={e => e.key === "Enter" && (authScreen === "login" ? handleLogin() : handleRegister())}
+                style={{
+                  width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--border)",
+                  background: "rgba(255,255,255,0.03)", color: "var(--white)", fontSize: 13, fontFamily: "var(--font)", outline: "none",
+                }} />
+            </div>
+            {authScreen === "register" && (
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 11, color: "var(--text2)", marginBottom: 6, display: "block" }}>Peran</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  {roles.map(r => (
+                    <button key={r.id} className="btn" onClick={() => setAuthForm(p => ({ ...p, role: r.id }))}
+                      style={{
+                        padding: "10px", borderRadius: 10, textAlign: "left",
+                        background: authForm.role === r.id ? `${r.c}10` : "rgba(255,255,255,0.02)",
+                        color: authForm.role === r.id ? r.c : "var(--text2)",
+                        border: `1px solid ${authForm.role === r.id ? `${r.c}30` : "var(--border)"}`,
+                        fontSize: 12, fontWeight: 600,
+                      }}>
+                      <span style={{ marginRight: 4 }}>{r.icon}</span>{r.label}
+                      <div style={{ fontSize: 9, opacity: 0.7, marginTop: 1 }}>{r.sub}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button onClick={authScreen === "login" ? handleLogin : handleRegister}
+              className="btn" style={{
+                width: "100%", padding: "13px", borderRadius: 12,
+                background: "linear-gradient(135deg, #22C55E, #16A34A)", color: "#fff",
+                fontWeight: 700, fontSize: 14, letterSpacing: "-0.3px",
+              }}>
+              {authScreen === "login" ? "Masuk" : "Daftar"}
+            </button>
+          </div>
+          <div style={{ textAlign: "center", marginTop: 16, fontSize: 10, color: "var(--text2)", fontFamily: "var(--mono)" }}>
+            Pondok Aren, Tangerang Selatan
+          </div>
+        </div>
+      </div>
+    </div>
   );
 
   return (
