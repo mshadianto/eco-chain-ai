@@ -86,27 +86,53 @@ const buildWastePrompt = (prices) => {
   const grouped = {};
   for (const p of prices) {
     if (!grouped[p.category]) grouped[p.category] = [];
-    grouped[p.category].push(`${p.item_code}=${p.name}`);
+    grouped[p.category].push(`${p.item_code}=${p.name} (${p.unit})`);
   }
   let codes = "";
   for (const [cat, items] of Object.entries(grouped)) {
     codes += `${cat.toUpperCase()}: ${items.join(", ")}\n`;
   }
-  return `Kamu adalah AI waste sorting assistant untuk Bank Sampah di Indonesia.
-Analisis foto ini dan identifikasi semua item sampah yang bisa dijual/didaur ulang.
+  return `Kamu adalah AI waste sorting expert untuk Bank Sampah di Indonesia.
+Analisis foto ini dan identifikasi SEMUA item sampah yang bisa dijual/didaur ulang.
 
-Klasifikasikan setiap item ke SALAH SATU kode berikut:
+PENTING — PANDUAN VISUAL untuk identifikasi akurat:
+• Botol plastik BERSIH (transparan, tanpa label, kering) → kode "Botol Bersih", BUKAN "Mineral Kotor"
+• Botol plastik KOTOR (ada label, basah, kusam) → kode "Botol / Gelas Mineral Kotor"
+• Gelas plastik bening (cup bersih) → "Gelas Bersih"
+• Kardus coklat (box paket, karton) → "Kardus / Box"
+• Kertas putih (HVS, fotokopi) → "HVS / Putihan"
+• Ember warna-warni → "Ember Campur / Emberan"
+• Ember hitam / pot tanaman → "Ember Hitam / Pot Bunga"
+• Kaleng aluminium (ringan, bisa diremas) → "Alumunium"
+• Kaleng baja/timah (berat, label makanan) → "Kaleng"
+• Besi (konstruksi, paku, baja) → "Besi" atau "Kabin / Paku / Baja Ringan"
+• Botol/jerigen minyak bekas → "Minyak Jelantah"
+• Galon air besar (19L) → "Botol Galon"
+• Tutup galon/botol (kecil, warna) → "Tutup Galon / LD" atau "Tutup Botol"
+• Kabel listrik → "Kabel"
+• Barang elektronik → identifikasi spesifik (TV, Laptop, dll)
+• Styrofoam (putih, ringan) → "Styrofoam"
+
+DAFTAR KODE LENGKAP (gunakan HANYA kode ini):
 ${codes}
+ESTIMASI BERAT — gunakan referensi:
+• 1 botol plastik 600ml ≈ 0.03 kg, 12 botol ≈ 0.35 kg
+• 1 kardus sedang ≈ 0.5-1.5 kg, kardus besar ≈ 2-5 kg
+• 1 kaleng minuman ≈ 0.015 kg
+• 1 ember plastik ≈ 0.3-0.8 kg
+• Besi/logam terlihat berat: estimasi konservatif
+• Jika banyak item sejenis, hitung jumlah lalu kalikan
+
 Untuk setiap item berikan:
-- item: deskripsi singkat apa yang terlihat
-- code: kode dari daftar di atas (HARUS tepat cocok)
+- item: deskripsi singkat apa yang TERLIHAT di foto (termasuk jumlah jika >1)
+- code: kode TEPAT dari daftar di atas
 - cat: kategori key (${Object.keys(grouped).join("/")})
-- weight: estimasi berat dalam kg (berdasarkan ukuran visual)
-- tip: tips sorting untuk harga lebih tinggi dalam Bahasa Indonesia, atau null
+- weight: estimasi total berat dalam kg
+- tip: tips sorting PRAKTIS dalam Bahasa Indonesia untuk dapat harga lebih tinggi, atau null
 
 Format JSON:
 {"label":"deskripsi singkat tumpukan","results":[{"item":"...","code":"...","cat":"...","weight":0.0,"tip":"...atau null"}]}
-Jika tidak ada sampah: {"label":"Tidak terdeteksi","results":[]}`;
+Jika tidak ada sampah yang bisa didaur ulang: {"label":"Tidak terdeteksi","results":[]}`;
 };
 
 const resizeAndEncode = (file) => new Promise((resolve, reject) => {
@@ -122,7 +148,7 @@ const resizeAndEncode = (file) => new Promise((resolve, reject) => {
     const c = document.createElement("canvas");
     c.width = w; c.height = h;
     c.getContext("2d").drawImage(img, 0, 0, w, h);
-    const dataUrl = c.toDataURL("image/jpeg", 0.7);
+    const dataUrl = c.toDataURL("image/jpeg", 0.8);
     URL.revokeObjectURL(img.src);
     resolve({ base64: dataUrl.split(",")[1], preview: dataUrl });
   };
@@ -139,7 +165,7 @@ const callGeminiVision = async (base64, prompt) => {
         { inline_data: { mime_type: "image/jpeg", data: base64 } },
         { text: prompt },
       ]}],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 1024, responseMimeType: "application/json" },
+      generationConfig: { temperature: 0.15, maxOutputTokens: 2048, responseMimeType: "application/json" },
     }),
   });
   if (!res.ok) throw new Error(`Gemini API ${res.status}`);
