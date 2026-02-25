@@ -69,7 +69,9 @@ const sb = {
       method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
       body: JSON.stringify({ email, password }),
     });
-    return r.json();
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error_description || data.msg || data.error?.message || `Login gagal (${r.status})`);
+    return data;
   },
   async getUser(token) {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -344,8 +346,6 @@ export default function EcoChain() {
         }
       } else {
         const res = await sb.signIn(authForm.email, authForm.password);
-        if (res.error) throw new Error(res.error_description || res.error.message || "Login gagal");
-        if (!res.access_token) throw new Error("Login gagal — tidak ada token.");
         const u = res.user || (await sb.getUser(res.access_token));
         let prof = null;
         try {
