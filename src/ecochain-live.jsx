@@ -173,9 +173,31 @@ const callGeminiVision = async (base64, prompt) => {
 };
 
 const parseGeminiResponse = (apiRes, prices) => {
-  const text = apiRes?.candidates?.[0]?.content?.parts?.[0]?.text;
+  let text = apiRes?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) return null;
-  const data = JSON.parse(text);
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // Try to fix common JSON issues from Gemini
+    try {
+      // Remove markdown code fences if present
+      text = text.replace(/```json\s*/g, "").replace(/```\s*/g, "");
+      // Fix unterminated strings — truncate to last valid object/array close
+      const lastBrace = Math.max(text.lastIndexOf("}"), text.lastIndexOf("]"));
+      if (lastBrace > 0) text = text.slice(0, lastBrace + 1);
+      // Balance braces if needed
+      const opens = (text.match(/\{/g) || []).length;
+      const closes = (text.match(/\}/g) || []).length;
+      if (opens > closes) text += "}".repeat(opens - closes);
+      const openB = (text.match(/\[/g) || []).length;
+      const closeB = (text.match(/\]/g) || []).length;
+      if (openB > closeB) text += "]".repeat(openB - closeB);
+      data = JSON.parse(text);
+    } catch {
+      return null;
+    }
+  }
   const validResults = (data.results || [])
     .filter(r => r.code && r.cat && typeof r.weight === "number" && r.weight > 0)
     .map(r => {
