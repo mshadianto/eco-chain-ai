@@ -257,8 +257,8 @@ function parseCoordinates(text) {
 
 // ─── TRANSLATIONS ───
 const T = {
-  id: { dashboard:"Dashboard", prices:"Harga", scan:"Scan", chat:"Chat AI", map:"Peta", tx:"Transaksi", reports:"Laporan", newtx:"Buat TX", kelola:"Kelola Harga", settings:"Pengaturan", pickup:"Pickup", login:"Masuk", register:"Daftar Baru", logout:"Keluar", name:"Nama", email:"Email", password:"Password", confirm_pw:"Konfirmasi Password", submit:"Kirim", save:"Simpan", cancel:"Batal", delete_btn:"Hapus", refresh:"Refresh", total:"Total", weight:"Berat", value:"Nilai", items:"Item", filter:"Filter", export_csv:"Export CSV", week:"Minggu Ini", month:"Bulan Ini", all_time:"Semua", pending:"Menunggu", pickup_s:"Dijemput", done:"Selesai", cancelled:"Dibatalkan", points:"Poin", leaderboard:"Papan Peringkat", no_data:"Belum ada data.", profile:"Profil", change_pw:"Ganti Password", watch:"Pantau", unwatch:"Batal Pantau", alerts:"Notifikasi Harga", install_app:"Install Aplikasi", not_logged:"Belum login", welcome:"Selamat datang", network:"Network", select_dp:"Pilih Drop Point untuk lihat harga:", create_tx:"Buat Transaksi", scan_title:"Scan Sampah — AI Vision", chat_title:"EcoChain Assistant", new_pw:"Password Baru", save_profile:"Simpan Profil", total_tx:"Total Transaksi", total_weight:"Total Berat", total_value:"Total Nilai", active_items:"Item Aktif", select_bs:"Pilih Bank Sampah", select_pelp:"Pilih Pelapak Sumber", margin:"Margin" },
-  en: { dashboard:"Dashboard", prices:"Prices", scan:"Scan", chat:"AI Chat", map:"Map", tx:"Transactions", reports:"Reports", newtx:"Create TX", kelola:"Manage Prices", settings:"Settings", pickup:"Pickup", login:"Login", register:"Register", logout:"Logout", name:"Name", email:"Email", password:"Password", confirm_pw:"Confirm Password", submit:"Send", save:"Save", cancel:"Cancel", delete_btn:"Delete", refresh:"Refresh", total:"Total", weight:"Weight", value:"Value", items:"Items", filter:"Filter", export_csv:"Export CSV", week:"This Week", month:"This Month", all_time:"All Time", pending:"Pending", pickup_s:"Pickup", done:"Done", cancelled:"Cancelled", points:"Points", leaderboard:"Leaderboard", no_data:"No data yet.", profile:"Profile", change_pw:"Change Password", watch:"Watch", unwatch:"Unwatch", alerts:"Price Alerts", install_app:"Install App", not_logged:"Not logged in", welcome:"Welcome", network:"Network", select_dp:"Select Drop Point to view prices:", create_tx:"Create Transaction", scan_title:"Scan Waste — AI Vision", chat_title:"EcoChain Assistant", new_pw:"New Password", save_profile:"Save Profile", total_tx:"Total Transactions", total_weight:"Total Weight", total_value:"Total Value", active_items:"Active Items", select_bs:"Select Bank Sampah", select_pelp:"Select Pelapak Source", margin:"Margin" },
+  id: { dashboard:"Dashboard", prices:"Harga", scan:"Scan", chat:"Chat AI", map:"Peta", tx:"Transaksi", reports:"Laporan", newtx:"Buat TX", kelola:"Kelola Harga", settings:"Pengaturan", pickup:"Pickup", login:"Masuk", register:"Daftar Baru", logout:"Keluar", name:"Nama", email:"Email", password:"Password", confirm_pw:"Konfirmasi Password", submit:"Kirim", save:"Simpan", cancel:"Batal", delete_btn:"Hapus", refresh:"Refresh", total:"Total", weight:"Berat", value:"Nilai", items:"Item", filter:"Filter", export_csv:"Export CSV", week:"Minggu Ini", month:"Bulan Ini", all_time:"Semua", pending:"Menunggu", pickup_s:"Dijemput", done:"Selesai", cancelled:"Dibatalkan", points:"Poin", leaderboard:"Papan Peringkat", no_data:"Belum ada data.", profile:"Profil", change_pw:"Ganti Password", watch:"Pantau", unwatch:"Batal Pantau", alerts:"Notifikasi Harga", install_app:"Install Aplikasi", not_logged:"Belum login", welcome:"Selamat datang", network:"Network", select_dp:"Pilih Drop Point untuk lihat harga:", create_tx:"Buat Transaksi", scan_title:"Scan Sampah — AI Vision", chat_title:"EcoChain Assistant", new_pw:"Password Baru", save_profile:"Simpan Profil", total_tx:"Total Transaksi", total_weight:"Total Berat", total_value:"Total Nilai", active_items:"Item Aktif", select_bs:"Pilih Bank Sampah", select_pelp:"Pilih Pelapak Sumber", margin:"Margin", env_impact:"Dampak Lingkungan", co2_saved:"CO₂ Dihemat", trees_saved:"Pohon Diselamatkan", water_saved:"Air Dihemat", community:"Komunitas", tips_title:"Tips Daur Ulang", recent_activity:"Aktivitas Terkini", offline_mode:"Mode Offline", cached_data:"Data tersimpan lokal", price_history:"Riwayat Harga", select_item:"Pilih item", days_30:"30 Hari", days_90:"90 Hari", invoice:"Struk", print_invoice:"Cetak Struk", heatmap:"Heatmap Aktivitas", show_heatmap:"Tampilkan Heatmap", enable_notif:"Aktifkan Notifikasi", notif_enabled:"Notifikasi aktif", rate:"Beri Rating", review:"Ulasan", rating:"Rating", avg_rating:"Rating Rata-rata", review_placeholder:"Tulis komentar (opsional)", review_submitted:"Ulasan berhasil dikirim!", referral:"Referral", referral_code:"Kode Referral", referral_copied:"Kode referral disalin!", enter_referral:"Punya kode referral?", request_pickup:"Minta Pickup", pickup_status:"Status Pickup", pickup_requested:"Pickup diminta!", pickup_address:"Alamat Penjemputan", share:"Bagikan", share_achievement:"Bagikan Pencapaian", onboard_next:"Lanjut", onboard_skip:"Lewati", onboard_done:"Selesai!", estimated_weight:"Estimasi Berat", schedule_pickup:"Jadwalkan", start_pickup:"Mulai Pickup", complete_pickup:"Selesai" },
+  en: { dashboard:"Dashboard", prices:"Prices", scan:"Scan", chat:"AI Chat", map:"Map", tx:"Transactions", reports:"Reports", newtx:"Create TX", kelola:"Manage Prices", settings:"Settings", pickup:"Pickup", login:"Login", register:"Register", logout:"Logout", name:"Name", email:"Email", password:"Password", confirm_pw:"Confirm Password", submit:"Send", save:"Save", cancel:"Cancel", delete_btn:"Delete", refresh:"Refresh", total:"Total", weight:"Weight", value:"Value", items:"Items", filter:"Filter", export_csv:"Export CSV", week:"This Week", month:"This Month", all_time:"All Time", pending:"Pending", pickup_s:"Pickup", done:"Done", cancelled:"Cancelled", points:"Points", leaderboard:"Leaderboard", no_data:"No data yet.", profile:"Profile", change_pw:"Change Password", watch:"Watch", unwatch:"Unwatch", alerts:"Price Alerts", install_app:"Install App", not_logged:"Not logged in", welcome:"Welcome", network:"Network", select_dp:"Select Drop Point to view prices:", create_tx:"Create Transaction", scan_title:"Scan Waste — AI Vision", chat_title:"EcoChain Assistant", new_pw:"New Password", save_profile:"Save Profile", total_tx:"Total Transactions", total_weight:"Total Weight", total_value:"Total Value", active_items:"Active Items", select_bs:"Select Bank Sampah", select_pelp:"Select Pelapak Source", margin:"Margin", env_impact:"Environmental Impact", co2_saved:"CO₂ Saved", trees_saved:"Trees Saved", water_saved:"Water Saved", community:"Community", tips_title:"Recycling Tips", recent_activity:"Recent Activity", offline_mode:"Offline Mode", cached_data:"Locally cached data", price_history:"Price History", select_item:"Select item", days_30:"30 Days", days_90:"90 Days", invoice:"Receipt", print_invoice:"Print Receipt", heatmap:"Activity Heatmap", show_heatmap:"Show Heatmap", enable_notif:"Enable Notifications", notif_enabled:"Notifications enabled", rate:"Rate", review:"Review", rating:"Rating", avg_rating:"Average Rating", review_placeholder:"Write a comment (optional)", review_submitted:"Review submitted!", referral:"Referral", referral_code:"Referral Code", referral_copied:"Referral code copied!", enter_referral:"Have a referral code?", request_pickup:"Request Pickup", pickup_status:"Pickup Status", pickup_requested:"Pickup requested!", pickup_address:"Pickup Address", share:"Share", share_achievement:"Share Achievement", onboard_next:"Next", onboard_skip:"Skip", onboard_done:"Done!", estimated_weight:"Estimated Weight", schedule_pickup:"Schedule", start_pickup:"Start Pickup", complete_pickup:"Complete" },
 };
 
 // ─── MINI SVG BAR CHART ───
@@ -284,6 +284,51 @@ function downloadCSV(rows, filename) {
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
+
+// ─── SVG LINE CHART ───
+function LineChart({ data, width = 320, height = 120, color = "var(--g)" }) {
+  if (!data.length) return null;
+  const maxY = Math.max(...data.map(d => d.y), 1);
+  const minY = Math.min(...data.map(d => d.y), 0);
+  const range = maxY - minY || 1;
+  const pts = data.map((d, i) => {
+    const x = (i / Math.max(data.length - 1, 1)) * width;
+    const y = height - ((d.y - minY) / range) * (height - 20) - 10;
+    return `${x},${y}`;
+  });
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height }}>
+      <polyline fill="none" stroke={color} strokeWidth="2" points={pts.join(" ")} />
+      {data.map((d, i) => {
+        const [cx, cy] = pts[i].split(",");
+        return <circle key={i} cx={cx} cy={cy} r="3" fill={color} opacity={i === data.length - 1 ? 1 : 0.4} />;
+      })}
+      {data.length > 0 && <text x={width - 2} y={12} textAnchor="end" fill="var(--t2)" fontSize="9" fontFamily="var(--m)">{data[data.length - 1].label}</text>}
+    </svg>
+  );
+}
+
+// ─── ECO TIPS ───
+const ECO_TIPS = [
+  { icon: "♻️", id: "Pisahkan sampah per kategori", en: "Separate waste by category", body_id: "Sampah terpisah = harga lebih tinggi di Bank Sampah.", body_en: "Separated waste = higher prices at Bank Sampah." },
+  { icon: "💧", id: "Bersihkan botol plastik", en: "Clean plastic bottles", body_id: "Lepas label, bilas, keringkan. Botol bersih harga 2-3x lipat.", body_en: "Remove labels, rinse, dry. Clean bottles fetch 2-3x price." },
+  { icon: "📦", id: "Lipat kardus dengan rapi", en: "Fold cardboard neatly", body_id: "Kardus yang dilipat hemat ruang dan lebih mudah ditimbang.", body_en: "Folded cardboard saves space and is easier to weigh." },
+  { icon: "🛢️", id: "Saring minyak jelantah", en: "Filter used cooking oil", body_id: "Jangan campur air. Gunakan kain saringan sebelum jual.", body_en: "Don't mix with water. Use cloth filter before selling." },
+  { icon: "🔋", id: "Pisahkan limbah B3", en: "Separate hazardous waste", body_id: "Baterai dan elektronik jangan campur sampah biasa.", body_en: "Batteries and electronics should not be mixed with regular waste." },
+  { icon: "🌱", id: "Kompos sampah organik", en: "Compost organic waste", body_id: "Sisa sayur/buah bisa jadi pupuk dalam 2-4 minggu.", body_en: "Vegetable/fruit scraps can become fertilizer in 2-4 weeks." },
+  { icon: "👜", id: "Gunakan tas belanja sendiri", en: "Bring your own shopping bag", body_id: "Kurangi plastik sekali pakai, mulai dari tas belanja.", body_en: "Reduce single-use plastic, start with shopping bags." },
+  { icon: "📱", id: "Scan dengan EcoChain AI", en: "Scan with EcoChain AI", body_id: "Foto sampah untuk identifikasi otomatis dan estimasi harga.", body_en: "Photo your waste for automatic identification and price estimation." },
+  { icon: "🏆", id: "Kumpulkan poin dari setor", en: "Collect points from deposits", body_id: "Setiap kg sampah = 10 poin. Raih badge dan naik peringkat!", body_en: "Every kg of waste = 10 points. Earn badges and climb the leaderboard!" },
+  { icon: "🤝", id: "Ajak tetangga ikut serta", en: "Invite neighbors to participate", body_id: "Semakin banyak partisipan, lingkungan semakin bersih.", body_en: "More participants means a cleaner environment." },
+];
+
+// ─── ONBOARDING STEPS ───
+const ONBOARD_STEPS = [
+  { tab: "prices", text_id: "Lihat harga sampah di tab Harga", text_en: "View waste prices in the Prices tab" },
+  { tab: "scan", text_id: "Scan sampah dengan AI Vision di tab Scan", text_en: "Scan waste with AI Vision in Scan tab" },
+  { tab: "chat", text_id: "Tanya asisten AI tentang daur ulang", text_en: "Ask the AI assistant about recycling" },
+  { tab: "dashboard", text_id: "Lihat statistik dan pencapaian di Dashboard", text_en: "View stats and achievements in Dashboard" },
+];
 
 // ═══════════════════════════════════════════════════════════════
 // MAIN APP
@@ -333,6 +378,22 @@ export default function EcoChain() {
   const txPhotoRef = useRef(null);
   const [installPrompt, setInstallPrompt] = useState(null);
 
+  // ─── BATCH 2 STATE ───
+  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [onboardStep, setOnboardStep] = useState(0);
+  const [showOnboard, setShowOnboard] = useState(false);
+  const [priceHistory, setPriceHistory] = useState([]);
+  const [historyItem, setHistoryItem] = useState("");
+  const [historyRange, setHistoryRange] = useState(30);
+  const [reviews, setReviews] = useState([]);
+  const [reviewForm, setReviewForm] = useState({ txId: null, rating: 0, comment: "" });
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [printTx, setPrintTx] = useState(null);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [notifPermission, setNotifPermission] = useState(typeof Notification !== "undefined" ? Notification.permission : "denied");
+  const [pickupForm, setPickupForm] = useState({ dp: "", address: "", estimated_kg: "", notes: "" });
+  const [pickupTab, setPickupTab] = useState("list");
+
   // New Transaction form
   const [txForm, setTxForm] = useState({ dp: "", items: [{ code: "", weight: "" }] });
 
@@ -372,6 +433,30 @@ export default function EcoChain() {
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
+
+  // ─── ONLINE/OFFLINE ───
+  useEffect(() => {
+    const goOn = () => { setIsOnline(true); flash(lang === "id" ? "🌐 Online kembali" : "🌐 Back online"); };
+    const goOff = () => { setIsOnline(false); flash(lang === "id" ? "📴 Mode offline" : "📴 Offline mode", "info"); };
+    window.addEventListener("online", goOn);
+    window.addEventListener("offline", goOff);
+    return () => { window.removeEventListener("online", goOn); window.removeEventListener("offline", goOff); };
+  }, [lang]);
+
+  // ─── BROWSER NOTIFICATION HELPER ───
+  const sendBrowserNotif = useCallback((title, body) => {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/manifest.json" });
+    }
+  }, []);
+
+  const requestNotifPermission = async () => {
+    if (!("Notification" in window)) { flash("Browser tidak mendukung notifikasi", "err"); return; }
+    const perm = await Notification.requestPermission();
+    setNotifPermission(perm);
+    if (perm === "granted") flash(t("notif_enabled"));
+    else flash(lang === "id" ? "Notifikasi diblokir browser" : "Notifications blocked", "err");
+  };
 
   const toggleWatch = (code) => {
     setWatchedItems(prev => {
@@ -432,21 +517,35 @@ export default function EcoChain() {
       setPelapakList(pelList || []);
       if (!catFilter && cat?.length) setCatFilter(cat[0].code);
 
+      // Cache for offline
+      localStorage.setItem("eco_cache", JSON.stringify({ pelapakPrices: pp, dropPoints: dp, bankSampah: bs, categories: cat, ts: Date.now() }));
+
       // Load transactions + items if authenticated
       if (tk && tk !== SUPABASE_ANON_KEY) {
-        const [tx, ti, pk] = await Promise.all([
+        const [tx, ti, pk, rv, ph] = await Promise.all([
           sb.query("transactions", "order=created_at.desc&limit=30", tk).catch(() => []),
           sb.query("transaction_items", "order=id.asc", tk).catch(() => []),
           sb.query("pickup_schedules", "order=pickup_date.asc", tk).catch(() => []),
+          sb.query("reviews", "order=created_at.desc&limit=100", tk).catch(() => []),
+          sb.query("price_history", "order=recorded_at.desc&limit=500", tk).catch(() => []),
         ]);
         setTransactions(tx || []);
         setTxItems(ti || []);
         setPickups(pk || []);
+        setReviews(rv || []);
+        setPriceHistory(ph || []);
         // Load leaderboard
         sb.query("profiles", "select=id,name,role,points&order=points.desc&limit=10", tk).then(lb => setLeaderboard(lb || [])).catch(() => {});
       }
     } catch (e) {
       console.error("Load error:", e);
+      // Offline fallback
+      if (!navigator.onLine) {
+        try {
+          const cached = JSON.parse(localStorage.getItem("eco_cache") || "{}");
+          if (cached.pelapakPrices) { setPelapakPrices(cached.pelapakPrices); setDropPoints(cached.dropPoints || []); setBankSampah(cached.bankSampah || []); setCategories(cached.categories || []); }
+        } catch {}
+      }
     }
     setLoading(false);
   }, [token, catFilter]);
@@ -469,7 +568,11 @@ export default function EcoChain() {
           setBankSampah(bs || []);
           setCategories(cat || []);
           if (!catFilter && cat?.length) setCatFilter(cat[0].code);
-        } catch (e) { console.error(e); }
+          localStorage.setItem("eco_cache", JSON.stringify({ pelapakPrices: pp, dropPoints: dp, bankSampah: bs, categories: cat, ts: Date.now() }));
+        } catch (e) {
+          console.error(e);
+          if (!navigator.onLine) { try { const c = JSON.parse(localStorage.getItem("eco_cache") || "{}"); if (c.pelapakPrices) { setPelapakPrices(c.pelapakPrices); setDropPoints(c.dropPoints || []); setBankSampah(c.bankSampah || []); setCategories(c.categories || []); } } catch {} }
+        }
         setLoading(false);
       })();
     }
@@ -491,6 +594,7 @@ export default function EcoChain() {
     try {
       if (authMode === "register") {
         const meta = { name: authForm.name, role: authForm.role };
+        if (authForm.referralCode) meta.referral_code = authForm.referralCode;
         if (["dp", "bank", "pelapak"].includes(authForm.role)) {
           const coords = parseCoordinates(authForm.location);
           if (coords) { meta.lat = coords.lat; meta.lng = coords.lng; }
@@ -513,6 +617,14 @@ export default function EcoChain() {
           loadData(res.access_token);
           resolveMyEntity(prof, res.access_token);
           flash("✅ Registrasi berhasil! Selamat datang.");
+          // Award referral points
+          if (authForm.referralCode) {
+            sb.rpc("award_referral_points", { referrer_code: authForm.referralCode, bonus: 50 }, res.access_token).catch(() => {});
+          }
+          // Trigger onboarding for new users
+          if (!localStorage.getItem("eco_onboard_done") && (authForm.role === "user")) {
+            setShowOnboard(true); setOnboardStep(1);
+          }
         } else {
           flash("📧 Cek email untuk verifikasi akun.", "info");
           setAuthMode("login");
@@ -656,6 +768,8 @@ export default function EcoChain() {
       });
       if (!r.ok) { const e = await r.json(); throw new Error(e.message || `Insert failed`); }
       flash(`✅ Harga ${priceForm.item_name} disimpan!`);
+      // Record price history
+      sb.insert("price_history", { item_code: priceForm.item_code.trim(), item_name: priceForm.item_name.trim(), category: priceForm.category || "other", price: parseFloat(priceForm.price_per_kg), pelapak_id: user.id }, token).catch(() => {});
       setPriceForm({ item_code: "", item_name: "", category: "", unit: "kg", price_per_kg: "" });
       loadData();
     } catch (e) { flash(`❌ ${e.message}`, "err"); }
@@ -714,6 +828,7 @@ export default function EcoChain() {
     try {
       await sb.update("transactions", { id: txId }, { status }, token);
       flash(`✅ ${txId} → ${status === "done" ? "SELESAI" : status.toUpperCase()}`);
+      sendBrowserNotif("Transaksi", `${txId} → ${status.toUpperCase()}`);
       loadData();
     } catch (e) { flash(`❌ ${e.message}`, "err"); }
   };
@@ -823,6 +938,7 @@ export default function EcoChain() {
       }
     }
     setPriceAlerts(alerts);
+    if (alerts.length) sendBrowserNotif(lang === "id" ? "Harga Berubah" : "Price Changed", alerts.map(a => `${a.name}: ${a.up ? "↑" : "↓"}`).join(", "));
     const snapshot = {};
     for (const p of effectivePrices) snapshot[p.item_code] = p.dp_price || p.pelapak_price || 0;
     localStorage.setItem("eco_prev_prices", JSON.stringify(snapshot));
@@ -876,6 +992,25 @@ export default function EcoChain() {
     return badges;
   }, [transactions, txItems, lang]);
 
+  // ─── ENVIRONMENTAL IMPACT ───
+  const envImpact = useMemo(() => {
+    const doneTx = transactions.filter(tx => tx.status === "done");
+    const totalKg = doneTx.reduce((s, tx) => s + txItems.filter(i => i.transaction_id === tx.id).reduce((s2, it) => s2 + Number(it.weight_kg), 0), 0);
+    return { co2: (totalKg * 2.5).toFixed(1), trees: (totalKg / 50).toFixed(1), water: (totalKg * 15).toFixed(0), totalWeight: totalKg.toFixed(1) };
+  }, [transactions, txItems]);
+
+  // ─── DP RATINGS ───
+  const dpRatings = useMemo(() => {
+    const m = {};
+    for (const r of reviews) {
+      if (!m[r.drop_point_id]) m[r.drop_point_id] = { sum: 0, count: 0 };
+      m[r.drop_point_id].sum += r.rating;
+      m[r.drop_point_id].count++;
+    }
+    for (const k in m) m[k].avg = (m[k].sum / m[k].count).toFixed(1);
+    return m;
+  }, [reviews]);
+
   const getTxTotal = (txId) => {
     const items = txItems.filter(i => i.transaction_id === txId);
     return items.reduce((sum, it) => {
@@ -920,6 +1055,60 @@ export default function EcoChain() {
     }
     return days;
   }, [transactions, txItems]);
+
+  // ─── SUBMIT REVIEW ───
+  const submitReview = async () => {
+    if (!reviewForm.txId || reviewForm.rating < 1) return;
+    const tx = transactions.find(t2 => t2.id === reviewForm.txId);
+    try {
+      await sb.insert("reviews", { user_id: user.id, drop_point_id: tx?.drop_point_id || "", transaction_id: reviewForm.txId, rating: reviewForm.rating, comment: reviewForm.comment || null }, token);
+      flash(t("review_submitted"));
+      setShowReviewModal(false);
+      setReviewForm({ txId: null, rating: 0, comment: "" });
+      loadData();
+    } catch (e) { flash(`Error: ${e.message}`, "err"); }
+  };
+
+  // ─── PRINT INVOICE ───
+  const printInvoice = (txId) => {
+    setPrintTx(txId);
+    setTimeout(() => { window.print(); setPrintTx(null); }, 200);
+  };
+
+  // ─── REQUEST PICKUP ───
+  const requestPickup = async () => {
+    if (!pickupForm.dp || !pickupForm.address) { flash(lang === "id" ? "Lengkapi data!" : "Fill in all fields!", "err"); return; }
+    try {
+      await sb.insert("pickup_schedules", {
+        drop_point_id: pickupForm.dp, requested_by: user.id, status: "requested",
+        address: pickupForm.address, estimated_kg: parseFloat(pickupForm.estimated_kg) || null,
+        notes: pickupForm.notes || null, pickup_date: new Date().toISOString().slice(0, 10),
+      }, token);
+      flash(t("pickup_requested"));
+      sendBrowserNotif("Pickup", t("pickup_requested"));
+      setPickupForm({ dp: "", address: "", estimated_kg: "", notes: "" });
+      loadData();
+    } catch (e) { flash(`Error: ${e.message}`, "err"); }
+  };
+
+  // ─── UPDATE PICKUP STATUS ───
+  const updatePickupStatus = async (id, status) => {
+    try {
+      await sb.update("pickup_schedules", { id }, { status, updated_at: new Date().toISOString() }, token);
+      flash(`Pickup → ${status.toUpperCase()}`);
+      sendBrowserNotif("Pickup Update", `Status: ${status}`);
+      loadData();
+    } catch (e) { flash(`Error: ${e.message}`, "err"); }
+  };
+
+  // ─── SHARE ACHIEVEMENT ───
+  const shareAchievement = async () => {
+    const txt = lang === "id"
+      ? `🌍 Dampak lingkungan saya via EcoChain AI:\n♻️ ${envImpact.totalWeight} kg didaur ulang\n🌿 ${envImpact.co2} kg CO₂ dihemat\n🌳 ${envImpact.trees} pohon diselamatkan\n💧 ${envImpact.water} liter air dihemat\n🏆 ${myBadges.length} badge\n\n#EcoChainAI`
+      : `🌍 My impact via EcoChain AI:\n♻️ ${envImpact.totalWeight} kg recycled\n🌿 ${envImpact.co2} kg CO₂ saved\n🌳 ${envImpact.trees} trees saved\n💧 ${envImpact.water} L water saved\n🏆 ${myBadges.length} badges\n\n#EcoChainAI`;
+    if (navigator.share) { try { await navigator.share({ title: "EcoChain AI", text: txt }); } catch {} }
+    else window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, "_blank");
+  };
 
   // ─── CHAT SYSTEM PROMPT ───
   const buildChatSystemPrompt = useCallback(() => {
@@ -1062,6 +1251,25 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
           .addTo(map)
           .bindPopup(`<b>🏦 ${bs.name}</b><br>${bs.address}<br>⏰ ${bs.operating_hours || "-"}<br><a href="https://www.google.com/maps?q=${bs.lat},${bs.lng}" target="_blank">Navigate →</a>`);
       }
+      // Heatmap overlay
+      if (showHeatmap) {
+        const dpAct = {};
+        for (const tx of transactions.filter(t2 => t2.status === "done")) {
+          const did = tx.drop_point_id;
+          if (!dpAct[did]) dpAct[did] = { count: 0, weight: 0 };
+          dpAct[did].count++;
+          dpAct[did].weight += txItems.filter(i => i.transaction_id === tx.id).reduce((s, it) => s + Number(it.weight_kg), 0);
+        }
+        const maxW = Math.max(...Object.values(dpAct).map(a => a.weight), 1);
+        for (const dp of dropPoints) {
+          if (!dp.lat || !dp.lng) continue;
+          const act = dpAct[String(dp.id)] || { count: 0, weight: 0 };
+          if (act.count === 0) continue;
+          const ratio = act.weight / maxW;
+          window.L.circle([dp.lat, dp.lng], { radius: 200 + ratio * 800, fillColor: "#22C55E", color: "transparent", fillOpacity: 0.1 + ratio * 0.35 })
+            .addTo(map).bindPopup(`<b>${dp.name}</b><br>${act.count} TX, ${act.weight.toFixed(1)} kg`);
+        }
+      }
     };
     const loadLeaflet = () => {
       if (document.getElementById("leaflet-css")) { initMap(); return; }
@@ -1076,7 +1284,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
     };
     loadLeaflet();
     return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
-  }, [tab, dropPoints, bankSampah]);
+  }, [tab, dropPoints, bankSampah, showHeatmap, transactions, txItems]);
 
   const roleLabel = { user: "End User", dp: "Drop Point", bank: "Bank Sampah", pelapak: "Pelapak" };
   const roleIcon = { user: "👤", dp: "📍", bank: "🏦", pelapak: "🏭" };
@@ -1098,6 +1306,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
     .c:hover{border-color:var(--bdr2);box-shadow:0 4px 20px rgba(0,0,0,.25)}
     .bt{border:none;cursor:pointer;font-family:var(--f);transition:all .15s;border-radius:10px}
     .bt:hover{filter:brightness(1.1);transform:scale(1.01)}
+    @media print{body *{visibility:hidden}#invoice-print,#invoice-print *{visibility:visible}#invoice-print{position:absolute;left:0;top:0;width:100%;padding:20px}}
     .bt:active{transform:scale(.98)}
     .pl{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:7px;font-size:10px;font-weight:600}
     input,select{font-family:var(--f);background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:10px;padding:10px 14px;color:var(--w);font-size:13px;outline:none;width:100%;transition:border .2s}
@@ -1148,6 +1357,10 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
               <button className="bt" onClick={() => setShowAlerts(!showAlerts)} style={{ padding: "6px 10px", background: "rgba(255,255,255,.04)", color: priceAlerts.length ? "var(--y)" : "var(--t2)", fontSize: 13, border: "1px solid var(--bdr)", position: "relative" }}>
                 🔔{priceAlerts.length > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", background: "var(--r)", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{priceAlerts.length}</span>}
               </button>
+              {notifPermission === "default" && (
+                <button className="bt" onClick={requestNotifPermission} style={{ padding: "4px 8px", background: "rgba(34,197,94,.06)", color: "var(--g)", fontSize: 9, border: "1px solid rgba(34,197,94,.15)" }}>🔕</button>
+              )}
+              {notifPermission === "granted" && <span style={{ fontSize: 8, color: "var(--g)" }}>●</span>}
               <Badge color={roleColor[profile.role]}>{roleIcon[profile.role]} {roleLabel[profile.role]}</Badge>
               <span onClick={openProfile} style={{ fontSize: 12, color: "var(--w)", fontWeight: 600, cursor: "pointer" }}>{profile.name}</span>
               <button className="bt" onClick={logout} style={{ padding: "6px 14px", background: "rgba(239,68,68,.12)", color: "var(--r)", fontSize: 11, fontWeight: 600, border: "1px solid rgba(239,68,68,.2)" }}>{t("logout")}</button>
@@ -1242,6 +1455,13 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                   </div>
                 )}
 
+                {authMode === "register" && (
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>🎁 {t("enter_referral")}</label>
+                    <input value={authForm.referralCode || ""} onChange={e => setAuthForm(f => ({ ...f, referralCode: e.target.value }))} placeholder={t("referral_code") + " (" + (lang === "id" ? "opsional" : "optional") + ")"} />
+                  </div>
+                )}
+
                 <button type="submit" className="bt" disabled={authLoading}
                   style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg,#22C55E,#16A34A)", color: "#fff", fontWeight: 700, fontSize: 14, opacity: authLoading ? .6 : 1 }}>
                   {authLoading ? "⏳ Mohon tunggu..." : authMode === "login" ? "Masuk" : "Daftar"}
@@ -1298,7 +1518,8 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 { id: "newtx", label: `➕ ${t("newtx")}`, show: ["dp", "bank"].includes(profile.role) },
                 { id: "kelola", label: `📦 ${t("kelola")}`, show: profile.role === "pelapak" },
                 { id: "settings", label: `⚙️ ${t("settings")}`, show: ["bank", "dp"].includes(profile.role) },
-                { id: "pickup", label: `🚛 ${t("pickup")}`, show: ["dp", "bank"].includes(profile.role) },
+                { id: "pickup", label: `🚛 ${t("pickup")}`, show: !!token },
+                { id: "community", label: `🌱 ${t("community")}`, show: !!token },
               ].filter(tb => tb.show).map(tb => (
                 <button key={tb.id} className="bt" onClick={() => setTab(tb.id)} style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, background: tab === tb.id ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.02)", color: tab === tb.id ? "var(--g)" : "var(--t2)", border: `1px solid ${tab === tb.id ? "rgba(34,197,94,.25)" : "var(--bdr)"}`, whiteSpace: "nowrap" }}>
                   {tb.label}
@@ -1351,10 +1572,26 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                   </div>
                 </div>
 
+                {/* Environmental Impact */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+                  {[
+                    { icon: "🌿", value: `${envImpact.co2} kg`, label: t("co2_saved"), color: "var(--g)" },
+                    { icon: "🌳", value: envImpact.trees, label: t("trees_saved"), color: "var(--c)" },
+                    { icon: "💧", value: `${envImpact.water} L`, label: t("water_saved"), color: "var(--b)" },
+                  ].map(s => (
+                    <div key={s.label} className="c" style={{ padding: "12px 10px", textAlign: "center" }}>
+                      <div style={{ fontSize: 18 }}>{s.icon}</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "var(--d)", color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: 9, color: "var(--t2)" }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
                 {/* Gamification section */}
                 <div className="c" style={{ padding: "16px 20px", marginBottom: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)" }}>🏆 {t("points")}: <span style={{ color: "var(--y)", fontFamily: "var(--m)" }}>{myPoints}</span></div>
+                    <button className="bt" onClick={shareAchievement} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(34,197,94,.08)", color: "var(--g)", border: "1px solid rgba(34,197,94,.15)" }}>📤 {t("share")}</button>
                   </div>
                   {myBadges.length > 0 && (
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
@@ -1362,6 +1599,15 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                     </div>
                   )}
                   {myBadges.length === 0 && <div style={{ fontSize: 11, color: "var(--t2)", marginBottom: 10 }}>{lang === "id" ? "Setor sampah untuk mendapatkan badge!" : "Recycle waste to earn badges!"}</div>}
+                  {/* Referral code */}
+                  {profile?.referral_code && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--bg2)", borderRadius: 8, marginTop: 6 }}>
+                      <span style={{ fontSize: 10, color: "var(--t2)" }}>🎁 {t("referral_code")}:</span>
+                      <span style={{ fontSize: 12, fontFamily: "var(--m)", fontWeight: 700, color: "var(--g)" }}>{profile.referral_code}</span>
+                      <button className="bt" onClick={() => { navigator.clipboard.writeText(profile.referral_code); flash(t("referral_copied")); }}
+                        style={{ padding: "2px 8px", fontSize: 9, background: "rgba(34,197,94,.08)", color: "var(--g)", border: "1px solid rgba(34,197,94,.15)" }}>📋</button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Leaderboard */}
@@ -1403,6 +1649,33 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                     </button>
                   ))}
                 </div>
+
+                {/* Price History Chart */}
+                {priceHistory.length > 0 && (
+                  <div className="c" style={{ padding: "14px 18px", marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)", marginBottom: 8 }}>📈 {t("price_history")}</div>
+                    <div style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center" }}>
+                      <select value={historyItem} onChange={e => setHistoryItem(e.target.value)} style={{ flex: 2, fontSize: 11 }}>
+                        <option value="">{t("select_item")}</option>
+                        {effectivePrices.map(p => <option key={p.item_code} value={p.item_code}>{p.item_code} — {p.name}</option>)}
+                      </select>
+                      {[30, 90].map(d => (
+                        <button key={d} className="bt" onClick={() => setHistoryRange(d)}
+                          style={{ padding: "4px 8px", fontSize: 10, background: historyRange === d ? "rgba(34,197,94,.1)" : "transparent", color: historyRange === d ? "var(--g)" : "var(--t2)", border: `1px solid ${historyRange === d ? "rgba(34,197,94,.25)" : "var(--bdr)"}` }}>
+                          {d === 30 ? t("days_30") : t("days_90")}
+                        </button>
+                      ))}
+                    </div>
+                    {historyItem && (() => {
+                      const cutoff = Date.now() - historyRange * 864e5;
+                      const pts = priceHistory
+                        .filter(h => h.item_code === historyItem && new Date(h.recorded_at).getTime() >= cutoff)
+                        .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
+                        .map(h => ({ y: Number(h.price), label: new Date(h.recorded_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) }));
+                      return pts.length > 0 ? <LineChart data={pts} color="var(--g)" height={100} /> : <div style={{ fontSize: 11, color: "var(--t2)", padding: 8 }}>{t("no_data")}</div>;
+                    })()}
+                  </div>
+                )}
 
                 <div className="c" style={{ overflow: "hidden" }}>
                   {/* Header row — varies by role */}
@@ -1610,10 +1883,15 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             {/* ═── MAP TAB ──═ */}
             {!loading && tab === "map" && (
               <div className="fu">
-                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 10 }}>🗺️ {t("map")} — {t("network")}</h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>🗺️ {t("map")} — {t("network")}</h3>
+                  <button className="bt" onClick={() => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } setShowHeatmap(h => !h); }}
+                    style={{ padding: "4px 10px", fontSize: 10, background: showHeatmap ? "rgba(34,197,94,.1)" : "transparent", color: showHeatmap ? "var(--g)" : "var(--t2)", border: `1px solid ${showHeatmap ? "rgba(34,197,94,.25)" : "var(--bdr)"}` }}>
+                    🔥 {t("heatmap")} {showHeatmap ? "ON" : "OFF"}
+                  </button>
+                </div>
                 {/* Leaflet map container */}
                 <div ref={mapRef} className="c" style={{ height: 350, borderRadius: 14, overflow: "hidden", marginBottom: 14 }} />
-                {/* Leaflet map initialized via top-level useEffect */}
 
                 {/* Card listing below map */}
                 <h4 style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--d)", color: "var(--y)", marginBottom: 8 }}>📍 Drop Points ({dropPoints.length})</h4>
@@ -1628,6 +1906,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                       <div style={{ fontSize: 10, color: "var(--t2)" }}>{dp.address}</div>
                       <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 2 }}>👤 {dp.operator_name || "-"} • Stok: {Number(dp.current_stock_kg).toFixed(0)}/{Number(dp.capacity_kg).toFixed(0)} kg</div>
                       {dp.bank_sampah_id && <div style={{ fontSize: 9, color: "var(--b)", marginTop: 2 }}>🏦 {bankSampah.find(b => b.id === dp.bank_sampah_id)?.name || "?"}</div>}
+                      {dpRatings[dp.id] && <div style={{ fontSize: 9, color: "var(--y)", marginTop: 2 }}>⭐ {dpRatings[dp.id].avg} ({dpRatings[dp.id].count} {t("review")})</div>}
                     </div>
                   ))}
                 </div>
@@ -1729,6 +2008,18 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                                 <button className="bt" onClick={() => updateTxStatus(tx.id, "done")} style={{ padding: "6px 14px", background: "rgba(34,197,94,.12)", color: "var(--g)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(34,197,94,.2)" }}>✓ {t("done")}</button>
                               )}
                               <button className="bt" onClick={() => updateTxStatus(tx.id, "cancelled")} style={{ padding: "6px 14px", background: "rgba(239,68,68,.08)", color: "var(--r)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(239,68,68,.15)" }}>✕ {t("cancelled")}</button>
+                            </div>
+                          )}
+                          {/* Print + Rate buttons for done TX */}
+                          {tx.status === "done" && (
+                            <div style={{ marginTop: 10, display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
+                              <button className="bt" onClick={() => printInvoice(tx.id)} style={{ padding: "6px 14px", background: "rgba(59,130,246,.08)", color: "var(--b)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(59,130,246,.15)" }}>🖨️ {t("print_invoice")}</button>
+                              {profile.role === "user" && !reviews.find(r => r.transaction_id === tx.id) && (
+                                <button className="bt" onClick={() => { setReviewForm({ txId: tx.id, rating: 0, comment: "" }); setShowReviewModal(true); }} style={{ padding: "6px 14px", background: "rgba(245,158,11,.08)", color: "var(--y)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(245,158,11,.15)" }}>⭐ {t("rate")}</button>
+                              )}
+                              {reviews.find(r => r.transaction_id === tx.id) && (
+                                <Badge color="var(--y)">⭐ {reviews.find(r => r.transaction_id === tx.id)?.rating}/5</Badge>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1980,25 +2271,63 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             {/* ═── PICKUP TAB ──═ */}
             {!loading && tab === "pickup" && (
               <div className="fu">
-                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 14 }}>🚛 Jadwal Pickup ({pickups.length})</h3>
-                {pickups.length === 0 && <div style={{ padding: 30, textAlign: "center", color: "var(--t2)" }}>Belum ada jadwal pickup.</div>}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>🚛 {t("pickup")}</h3>
+                  {profile.role === "user" && (
+                    <button className="bt" onClick={() => setPickupTab(pickupTab === "request" ? "list" : "request")}
+                      style={{ padding: "4px 10px", fontSize: 10, background: pickupTab === "request" ? "rgba(34,197,94,.1)" : "transparent", color: pickupTab === "request" ? "var(--g)" : "var(--t2)", border: `1px solid ${pickupTab === "request" ? "rgba(34,197,94,.25)" : "var(--bdr)"}` }}>
+                      {pickupTab === "request" ? `📋 ${lang === "id" ? "Lihat Daftar" : "View List"}` : `➕ ${t("request_pickup")}`}
+                    </button>
+                  )}
+                </div>
+
+                {/* User request pickup form */}
+                {profile.role === "user" && pickupTab === "request" && (
+                  <div className="c" style={{ padding: 18, marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)", marginBottom: 10 }}>📋 {t("request_pickup")}</div>
+                    <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
+                      <select value={pickupForm.dp} onChange={e => setPickupForm(f => ({ ...f, dp: e.target.value }))}>
+                        <option value="">{t("select_dp")}</option>
+                        {dropPoints.map(dp => <option key={dp.id} value={dp.id}>{dp.name}</option>)}
+                      </select>
+                      <input placeholder={t("pickup_address")} value={pickupForm.address} onChange={e => setPickupForm(f => ({ ...f, address: e.target.value }))} />
+                      <input type="number" step="0.1" placeholder={t("estimated_weight") + " (kg)"} value={pickupForm.estimated_kg} onChange={e => setPickupForm(f => ({ ...f, estimated_kg: e.target.value }))} />
+                      <input placeholder={lang === "id" ? "Catatan (opsional)" : "Notes (optional)"} value={pickupForm.notes} onChange={e => setPickupForm(f => ({ ...f, notes: e.target.value }))} />
+                    </div>
+                    <button className="bt" onClick={requestPickup} style={{ width: "100%", padding: 12, background: "linear-gradient(135deg,#22C55E,#16A34A)", color: "#fff", fontWeight: 700, fontSize: 12 }}>🚛 {t("request_pickup")}</button>
+                  </div>
+                )}
+
+                {/* Pickup list */}
+                {pickups.length === 0 && <div style={{ padding: 30, textAlign: "center", color: "var(--t2)" }}>{t("no_data")}</div>}
                 {pickups.map((pk, i) => {
                   const dp = dropPoints.find(d => d.id === pk.drop_point_id);
                   const bs = bankSampah.find(b => b.id === pk.bank_sampah_id);
+                  const statusColors = { requested: "var(--y)", scheduled: "var(--c)", in_progress: "var(--b)", completed: "var(--g)", cancelled: "var(--r)" };
                   return (
                     <div key={pk.id} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "12px 16px", marginBottom: 6 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
-                          <Badge color={pk.status === "completed" ? "var(--g)" : pk.status === "in_progress" ? "var(--y)" : "var(--c)"}>{pk.status.toUpperCase()}</Badge>
+                          <Badge color={statusColors[pk.status] || "var(--t2)"}>{(pk.status || "scheduled").toUpperCase()}</Badge>
                           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--w)", marginLeft: 8 }}>{new Date(pk.pickup_date).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}</span>
                           {pk.pickup_time && <span style={{ fontSize: 10, color: "var(--t2)", marginLeft: 4 }}>{pk.pickup_time}</span>}
                         </div>
                         <span style={{ fontSize: 11, fontFamily: "var(--m)", color: "var(--t2)" }}>{pk.estimated_kg ? `~${pk.estimated_kg}kg` : ""}</span>
                       </div>
                       <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 3 }}>
-                        🏦 {bs?.name || pk.bank_sampah_id} → 📍 {dp?.name || pk.drop_point_id}
+                        {bs ? `🏦 ${bs.name} → ` : ""}{dp ? `📍 ${dp.name}` : pk.drop_point_id}
+                        {pk.address && <span style={{ marginLeft: 6 }}>📍 {pk.address}</span>}
                         {pk.notes && <span style={{ marginLeft: 6, fontStyle: "italic" }}>• {pk.notes}</span>}
                       </div>
+                      {/* Operator actions */}
+                      {["dp", "bank"].includes(profile.role) && !["completed", "cancelled"].includes(pk.status) && (
+                        <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+                          {pk.status === "requested" && <button className="bt" onClick={() => updatePickupStatus(pk.id, "scheduled")} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(6,182,212,.08)", color: "var(--c)", border: "1px solid rgba(6,182,212,.15)" }}>📅 {t("schedule_pickup")}</button>}
+                          {pk.status === "scheduled" && <button className="bt" onClick={() => updatePickupStatus(pk.id, "in_progress")} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(59,130,246,.08)", color: "var(--b)", border: "1px solid rgba(59,130,246,.15)" }}>🚛 {t("start_pickup")}</button>}
+                          {pk.status === "in_progress" && <button className="bt" onClick={() => updatePickupStatus(pk.id, "completed")} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(34,197,94,.08)", color: "var(--g)", border: "1px solid rgba(34,197,94,.15)" }}>✅ {t("complete_pickup")}</button>}
+                          <button className="bt" onClick={() => updatePickupStatus(pk.id, "cancelled")} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(239,68,68,.08)", color: "var(--r)", border: "1px solid rgba(239,68,68,.15)" }}>✕</button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -2070,6 +2399,46 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 })()}
               </div>
             )}
+
+            {/* ═── COMMUNITY TAB ──═ */}
+            {!loading && tab === "community" && (
+              <div className="fu">
+                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 14 }}>🌱 {t("community")}</h3>
+
+                {/* Eco Tips */}
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--g)", marginBottom: 8 }}>♻️ {t("tips_title")}</div>
+                <div style={{ display: "grid", gap: 8, marginBottom: 18 }}>
+                  {ECO_TIPS.map((tip, i) => (
+                    <div key={i} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "12px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                      <span style={{ fontSize: 22 }}>{tip.icon}</span>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--w)" }}>{lang === "en" ? tip.en : tip.id}</div>
+                        <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 2 }}>{lang === "en" ? tip.body_en : tip.body_id}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Recent Activity (anonymized) */}
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--c)", marginBottom: 8 }}>📋 {t("recent_activity")}</div>
+                {transactions.filter(tx => tx.status === "done").slice(0, 5).map((tx, i) => {
+                  const dp = dropPoints.find(d => d.id === tx.drop_point_id);
+                  const items = txItems.filter(it => it.transaction_id === tx.id);
+                  const totalKg = items.reduce((s, it) => s + Number(it.weight_kg), 0);
+                  const anonName = (tx.user_name || "?")[0] + "***";
+                  return (
+                    <div key={tx.id} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "10px 14px", marginBottom: 6 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+                        <span style={{ color: "var(--w)", fontWeight: 600 }}>{anonName} → {dp?.name || "?"}</span>
+                        <span style={{ color: "var(--g)", fontFamily: "var(--m)", fontWeight: 700 }}>{totalKg.toFixed(1)} kg</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: "var(--t2)", marginTop: 2 }}>{items.map(it => it.waste_name).join(", ")} • {new Date(tx.created_at).toLocaleDateString("id-ID")}</div>
+                    </div>
+                  );
+                })}
+                {transactions.filter(tx => tx.status === "done").length === 0 && <div style={{ padding: 20, textAlign: "center", color: "var(--t2)", fontSize: 11 }}>{t("no_data")}</div>}
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -2133,6 +2502,98 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
           <button className="bt" onClick={async () => { installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null); }}
             style={{ padding: "6px 14px", background: "#fff", color: "#16A34A", fontWeight: 700, fontSize: 11, border: "none" }}>Install</button>
           <button className="bt" onClick={() => setInstallPrompt(null)} style={{ background: "none", color: "rgba(255,255,255,.7)", border: "none", fontSize: 14 }}>✕</button>
+        </div>
+      )}
+
+      {/* Offline banner */}
+      {!isOnline && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 10000, padding: "6px 16px", background: "rgba(245,158,11,.92)", color: "#fff", fontSize: 11, fontWeight: 600, textAlign: "center" }}>
+          📴 {t("offline_mode")} — {t("cached_data")}
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setShowReviewModal(false)}>
+          <div className="c" style={{ padding: 24, width: "100%", maxWidth: 360, animation: "pop .2s ease" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--w)", marginBottom: 14 }}>⭐ {t("rate")}</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 12, justifyContent: "center" }}>
+              {[1, 2, 3, 4, 5].map(n => (
+                <button key={n} className="bt" onClick={() => setReviewForm(f => ({ ...f, rating: n }))}
+                  style={{ fontSize: 24, padding: 4, background: "none", border: "none", opacity: n <= reviewForm.rating ? 1 : 0.3, filter: n <= reviewForm.rating ? "none" : "grayscale(1)" }}>⭐</button>
+              ))}
+            </div>
+            <textarea placeholder={t("review_placeholder")} value={reviewForm.comment} onChange={e => setReviewForm(f => ({ ...f, comment: e.target.value }))}
+              rows={3} style={{ width: "100%", marginBottom: 12, background: "var(--bg2)", border: "1px solid var(--bdr)", borderRadius: 8, padding: 10, color: "var(--t)", fontSize: 12, fontFamily: "var(--f)", resize: "none" }} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="bt" onClick={submitReview} style={{ flex: 1, padding: 10, background: "linear-gradient(135deg,#F59E0B,#D97706)", color: "#fff", fontWeight: 700, fontSize: 12 }}>{t("submit")}</button>
+              <button className="bt" onClick={() => setShowReviewModal(false)} style={{ padding: "10px 16px", background: "rgba(255,255,255,.04)", color: "var(--t2)", fontSize: 12, border: "1px solid var(--bdr)" }}>{t("cancel")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Print Div (hidden, shown only during print) */}
+      {printTx && (() => {
+        const tx = transactions.find(t2 => t2.id === printTx);
+        if (!tx) return null;
+        const dp = dropPoints.find(d => d.id === tx.drop_point_id);
+        const items = txItems.filter(i => i.transaction_id === tx.id);
+        return (
+          <div id="invoice-print" style={{ fontFamily: "Arial, sans-serif", color: "#000", padding: 20 }}>
+            <h2 style={{ textAlign: "center", marginBottom: 4 }}>EcoChain AI Marketplace</h2>
+            <p style={{ textAlign: "center", fontSize: 12, color: "#666", marginBottom: 16 }}>Struk Transaksi</p>
+            <table style={{ width: "100%", fontSize: 12, marginBottom: 8 }}>
+              <tbody>
+                <tr><td style={{ fontWeight: "bold" }}>TX ID</td><td>{tx.id}</td></tr>
+                <tr><td style={{ fontWeight: "bold" }}>Tanggal</td><td>{new Date(tx.created_at).toLocaleString("id-ID")}</td></tr>
+                <tr><td style={{ fontWeight: "bold" }}>User</td><td>{tx.user_name}</td></tr>
+                <tr><td style={{ fontWeight: "bold" }}>Drop Point</td><td>{dp?.name || tx.drop_point_id}</td></tr>
+                <tr><td style={{ fontWeight: "bold" }}>Status</td><td>{tx.status.toUpperCase()}</td></tr>
+              </tbody>
+            </table>
+            <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", marginBottom: 12 }}>
+              <thead><tr style={{ borderBottom: "2px solid #000" }}><th style={{ textAlign: "left", padding: 4 }}>Item</th><th style={{ textAlign: "right", padding: 4 }}>Berat</th><th style={{ textAlign: "right", padding: 4 }}>Harga</th><th style={{ textAlign: "right", padding: 4 }}>Subtotal</th></tr></thead>
+              <tbody>
+                {items.map(it => {
+                  const p = effectivePrices.find(pr => pr.item_code === it.waste_code);
+                  const price = p?.dp_price || p?.pelapak_price || 0;
+                  return (
+                    <tr key={it.id} style={{ borderBottom: "1px solid #ddd" }}>
+                      <td style={{ padding: 4 }}>{it.waste_name}</td>
+                      <td style={{ textAlign: "right", padding: 4 }}>{Number(it.weight_kg).toFixed(1)} kg</td>
+                      <td style={{ textAlign: "right", padding: 4 }}>{rp(price)}</td>
+                      <td style={{ textAlign: "right", padding: 4, fontWeight: "bold" }}>{rp(price * Number(it.weight_kg))}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div style={{ textAlign: "right", fontSize: 16, fontWeight: "bold", marginBottom: 16 }}>Total: {rp(getTxTotal(tx.id))}</div>
+            <div style={{ textAlign: "center", fontSize: 10, color: "#999" }}>EcoChain AI Marketplace • ecochain-ai-marketplace.sopian-hadianto.workers.dev</div>
+          </div>
+        );
+      })()}
+
+      {/* Onboarding Overlay */}
+      {showOnboard && onboardStep >= 1 && onboardStep <= ONBOARD_STEPS.length && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 10001, background: "rgba(0,0,0,.75)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div className="c" style={{ padding: 24, maxWidth: 340, textAlign: "center", animation: "pop .2s ease" }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>{["💰", "📷", "🤖", "📊"][onboardStep - 1]}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--w)", marginBottom: 6 }}>{lang === "id" ? `Langkah ${onboardStep}/${ONBOARD_STEPS.length}` : `Step ${onboardStep}/${ONBOARD_STEPS.length}`}</div>
+            <div style={{ fontSize: 12, color: "var(--t)", marginBottom: 16 }}>{lang === "en" ? ONBOARD_STEPS[onboardStep - 1].text_en : ONBOARD_STEPS[onboardStep - 1].text_id}</div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              {onboardStep < ONBOARD_STEPS.length ? (
+                <button className="bt" onClick={() => { setTab(ONBOARD_STEPS[onboardStep - 1].tab); setOnboardStep(s => s + 1); }}
+                  style={{ padding: "8px 20px", background: "linear-gradient(135deg,#22C55E,#16A34A)", color: "#fff", fontWeight: 700, fontSize: 12 }}>{t("onboard_next")} →</button>
+              ) : (
+                <button className="bt" onClick={() => { setShowOnboard(false); localStorage.setItem("eco_onboard_done", "1"); setTab("dashboard"); }}
+                  style={{ padding: "8px 20px", background: "linear-gradient(135deg,#22C55E,#16A34A)", color: "#fff", fontWeight: 700, fontSize: 12 }}>🎉 {t("onboard_done")}</button>
+              )}
+              <button className="bt" onClick={() => { setShowOnboard(false); localStorage.setItem("eco_onboard_done", "1"); }}
+                style={{ padding: "8px 16px", background: "rgba(255,255,255,.04)", color: "var(--t2)", fontSize: 11, border: "1px solid var(--bdr)" }}>{t("onboard_skip")}</button>
+            </div>
+          </div>
         </div>
       )}
 
