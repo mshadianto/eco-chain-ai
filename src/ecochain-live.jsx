@@ -373,28 +373,6 @@ export default function EcoChain() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  // ─── PRICE ALERT CHECK ───
-  useEffect(() => {
-    if (!effectivePrices.length || !watchedItems.length) return;
-    const prev = JSON.parse(localStorage.getItem("eco_prev_prices") || "{}");
-    const alerts = [];
-    for (const code of watchedItems) {
-      const curr = effectivePrices.find(p => p.item_code === code);
-      const prevPrice = prev[code];
-      if (curr && prevPrice != null) {
-        const currPrice = curr.dp_price || curr.pelapak_price || 0;
-        if (currPrice !== prevPrice) {
-          alerts.push({ code, name: curr.name, prev: prevPrice, curr: currPrice, up: currPrice > prevPrice });
-        }
-      }
-    }
-    setPriceAlerts(alerts);
-    // Save current prices snapshot
-    const snapshot = {};
-    for (const p of effectivePrices) snapshot[p.item_code] = p.dp_price || p.pelapak_price || 0;
-    localStorage.setItem("eco_prev_prices", JSON.stringify(snapshot));
-  }, [effectivePrices, watchedItems]);
-
   const toggleWatch = (code) => {
     setWatchedItems(prev => {
       const next = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code];
@@ -829,9 +807,48 @@ export default function EcoChain() {
     }).map(p => normalize(p));
   }, [pelapakPrices, profile, user, myEntity, bankSampah, dropPoints, selectedDpForPrices]);
 
+  // ─── PRICE ALERT CHECK ───
+  useEffect(() => {
+    if (!effectivePrices.length || !watchedItems.length) return;
+    const prev = JSON.parse(localStorage.getItem("eco_prev_prices") || "{}");
+    const alerts = [];
+    for (const code of watchedItems) {
+      const curr = effectivePrices.find(p => p.item_code === code);
+      const prevPrice = prev[code];
+      if (curr && prevPrice != null) {
+        const currPrice = curr.dp_price || curr.pelapak_price || 0;
+        if (currPrice !== prevPrice) {
+          alerts.push({ code, name: curr.name, prev: prevPrice, curr: currPrice, up: currPrice > prevPrice });
+        }
+      }
+    }
+    setPriceAlerts(alerts);
+    const snapshot = {};
+    for (const p of effectivePrices) snapshot[p.item_code] = p.dp_price || p.pelapak_price || 0;
+    localStorage.setItem("eco_prev_prices", JSON.stringify(snapshot));
+  }, [effectivePrices, watchedItems]);
+
   const filteredPrices = useMemo(() =>
     catFilter ? effectivePrices.filter(p => p.category === catFilter) : effectivePrices
     , [effectivePrices, catFilter]);
+
+  // Prices based on the DP selected in the TX form (for newtx tab)
+  const txFormPrices = useMemo(() => {
+    if (!txForm.dp) return effectivePrices;
+    const dp = dropPoints.find(d => String(d.id) === String(txForm.dp));
+    if (!dp?.bank_sampah_id) return [];
+    const bs = bankSampah.find(b => b.id === dp.bank_sampah_id);
+    if (!bs?.pelapak_id) return [];
+    const bankMargin = Number(bs.margin) || 0;
+    const dpMargin = Number(dp.margin) || 0;
+    return pelapakPrices
+      .filter(p => p.pelapak_id === bs.pelapak_id)
+      .map(p => ({
+        ...p, name: p.item_name || p.name, pelapak_price: Number(p.price_per_kg),
+        bank_price: Number(p.price_per_kg) * (1 - bankMargin),
+        dp_price: Number(p.price_per_kg) * (1 - bankMargin) * (1 - dpMargin),
+      }));
+  }, [txForm.dp, dropPoints, bankSampah, pelapakPrices, effectivePrices]);
 
   const filteredTx = useMemo(() =>
     txStatusFilter === "all" ? transactions : transactions.filter(tx => tx.status === txStatusFilter)
@@ -858,6 +875,17 @@ export default function EcoChain() {
     if (totalWeight >= 500) badges.push({ icon: "👑", label: "500kg Legend" });
     return badges;
   }, [transactions, txItems, lang]);
+
+  const getTxTotal = (txId) => {
+    const items = txItems.filter(i => i.transaction_id === txId);
+    return items.reduce((sum, it) => {
+      const p = effectivePrices.find(pr => pr.item_code === it.waste_code);
+      const price = profile?.role === "pelapak" ? (p?.pelapak_price || 0)
+        : profile?.role === "bank" ? (p?.bank_price || 0)
+          : (p?.dp_price || p?.pelapak_price || 0);
+      return sum + price * Number(it.weight_kg);
+    }, 0);
+  };
 
   // ─── DASHBOARD STATS ───
   const computeStats = useMemo(() => {
@@ -892,17 +920,6 @@ export default function EcoChain() {
     }
     return days;
   }, [transactions, txItems]);
-
-  const getTxTotal = (txId) => {
-    const items = txItems.filter(i => i.transaction_id === txId);
-    return items.reduce((sum, it) => {
-      const p = effectivePrices.find(pr => pr.item_code === it.waste_code);
-      const price = profile?.role === "pelapak" ? (p?.pelapak_price || 0)
-        : profile?.role === "bank" ? (p?.bank_price || 0)
-          : (p?.dp_price || p?.pelapak_price || 0);
-      return sum + price * Number(it.weight_kg);
-    }, 0);
-  };
 
   // ─── CHAT SYSTEM PROMPT ───
   const buildChatSystemPrompt = useCallback(() => {
@@ -1021,6 +1038,45 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [aiChat, chatLoading]);
+
+  // ─── LEAFLET MAP ───
+  useEffect(() => {
+    if (tab !== "map" || !mapRef.current) return;
+    if (mapInstanceRef.current) { mapInstanceRef.current.invalidateSize(); return; }
+    const initMap = () => {
+      if (!window.L || !mapRef.current || mapInstanceRef.current) return;
+      const map = window.L.map(mapRef.current).setView([-6.26, 106.69], 13);
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap"
+      }).addTo(map);
+      mapInstanceRef.current = map;
+      for (const dp of dropPoints) {
+        if (!dp.lat || !dp.lng) continue;
+        window.L.circleMarker([dp.lat, dp.lng], { radius: 8, fillColor: "#F59E0B", color: "#D97706", weight: 2, fillOpacity: 0.8 })
+          .addTo(map)
+          .bindPopup(`<b>📍 ${dp.name}</b><br>${dp.address}<br>👤 ${dp.operator_name || "-"}<br>Stok: ${Number(dp.current_stock_kg).toFixed(0)}/${Number(dp.capacity_kg).toFixed(0)} kg<br><a href="https://www.google.com/maps?q=${dp.lat},${dp.lng}" target="_blank">Navigate →</a>`);
+      }
+      for (const bs of bankSampah) {
+        if (!bs.lat || !bs.lng) continue;
+        window.L.circleMarker([bs.lat, bs.lng], { radius: 8, fillColor: "#3B82F6", color: "#2563EB", weight: 2, fillOpacity: 0.8 })
+          .addTo(map)
+          .bindPopup(`<b>🏦 ${bs.name}</b><br>${bs.address}<br>⏰ ${bs.operating_hours || "-"}<br><a href="https://www.google.com/maps?q=${bs.lat},${bs.lng}" target="_blank">Navigate →</a>`);
+      }
+    };
+    const loadLeaflet = () => {
+      if (document.getElementById("leaflet-css")) { initMap(); return; }
+      const link = document.createElement("link");
+      link.id = "leaflet-css"; link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = () => initMap();
+      document.head.appendChild(script);
+    };
+    loadLeaflet();
+    return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
+  }, [tab, dropPoints, bankSampah]);
 
   const roleLabel = { user: "End User", dp: "Drop Point", bank: "Bank Sampah", pelapak: "Pelapak" };
   const roleIcon = { user: "👤", dp: "📍", bank: "🏦", pelapak: "🏭" };
@@ -1557,50 +1613,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 10 }}>🗺️ {t("map")} — {t("network")}</h3>
                 {/* Leaflet map container */}
                 <div ref={mapRef} className="c" style={{ height: 350, borderRadius: 14, overflow: "hidden", marginBottom: 14 }} />
-                {/* Load Leaflet dynamically */}
-                {(() => {
-                  // eslint-disable-next-line react-hooks/rules-of-hooks
-                  useEffect(() => {
-                    if (tab !== "map" || !mapRef.current) return;
-                    if (mapInstanceRef.current) { mapInstanceRef.current.invalidateSize(); return; }
-                    const loadLeaflet = () => {
-                      if (document.getElementById("leaflet-css")) { initMap(); return; }
-                      const link = document.createElement("link");
-                      link.id = "leaflet-css"; link.rel = "stylesheet";
-                      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-                      document.head.appendChild(link);
-                      const script = document.createElement("script");
-                      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-                      script.onload = () => initMap();
-                      document.head.appendChild(script);
-                    };
-                    const initMap = () => {
-                      if (!window.L || !mapRef.current || mapInstanceRef.current) return;
-                      const map = window.L.map(mapRef.current).setView([-6.26, 106.69], 13);
-                      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                        attribution: "&copy; OpenStreetMap"
-                      }).addTo(map);
-                      mapInstanceRef.current = map;
-                      // DP markers
-                      for (const dp of dropPoints) {
-                        if (!dp.lat || !dp.lng) continue;
-                        window.L.circleMarker([dp.lat, dp.lng], { radius: 8, fillColor: "#F59E0B", color: "#D97706", weight: 2, fillOpacity: 0.8 })
-                          .addTo(map)
-                          .bindPopup(`<b>📍 ${dp.name}</b><br>${dp.address}<br>👤 ${dp.operator_name || "-"}<br>Stok: ${Number(dp.current_stock_kg).toFixed(0)}/${Number(dp.capacity_kg).toFixed(0)} kg<br><a href="https://www.google.com/maps?q=${dp.lat},${dp.lng}" target="_blank">Navigate →</a>`);
-                      }
-                      // BS markers
-                      for (const bs of bankSampah) {
-                        if (!bs.lat || !bs.lng) continue;
-                        window.L.circleMarker([bs.lat, bs.lng], { radius: 8, fillColor: "#3B82F6", color: "#2563EB", weight: 2, fillOpacity: 0.8 })
-                          .addTo(map)
-                          .bindPopup(`<b>🏦 ${bs.name}</b><br>${bs.address}<br>⏰ ${bs.operating_hours || "-"}<br><a href="https://www.google.com/maps?q=${bs.lat},${bs.lng}" target="_blank">Navigate →</a>`);
-                      }
-                    };
-                    loadLeaflet();
-                    return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
-                  }, [tab]);
-                  return null;
-                })()}
+                {/* Leaflet map initialized via top-level useEffect */}
 
                 {/* Card listing below map */}
                 <h4 style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--d)", color: "var(--y)", marginBottom: 8 }}>📍 Drop Points ({dropPoints.length})</h4>
@@ -1744,7 +1757,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                     <div key={idx} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
                       <select value={item.code} onChange={e => { const items = [...txForm.items]; items[idx].code = e.target.value; setTxForm(f => ({ ...f, items })); }} style={{ flex: 2 }}>
                         <option value="">Pilih item</option>
-                        {effectivePrices.map(p => <option key={p.item_code} value={p.item_code}>{p.item_code} — {p.name} ({rp(p.dp_price || p.pelapak_price)}/{p.unit})</option>)}
+                        {txFormPrices.map(p => <option key={p.item_code} value={p.item_code}>{p.item_code} — {p.name} ({rp(p.dp_price || p.pelapak_price)}/{p.unit})</option>)}
                       </select>
                       <input type="number" step="0.1" min="0.1" placeholder="Berat (kg)" value={item.weight}
                         onChange={e => { const items = [...txForm.items]; items[idx].weight = e.target.value; setTxForm(f => ({ ...f, items })); }}
@@ -1764,7 +1777,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                       <div style={{ fontSize: 10, color: "var(--t2)" }}>Estimasi Total (level DP)</div>
                       <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--d)", color: "var(--g)" }}>
                         {rp(txForm.items.reduce((s, it) => {
-                          const p = effectivePrices.find(pr => pr.item_code === it.code);
+                          const p = txFormPrices.find(pr => pr.item_code === it.code);
                           return s + (p?.dp_price || p?.pelapak_price || 0) * (parseFloat(it.weight) || 0);
                         }, 0))}
                       </div>

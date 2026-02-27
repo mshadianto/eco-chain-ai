@@ -1,4 +1,4 @@
-const CACHE = "ecochain-v1";
+const CACHE = "ecochain-v2";
 const PRECACHE = ["/"];
 
 self.addEventListener("install", (e) => {
