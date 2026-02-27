@@ -239,6 +239,22 @@ function Anim({ value, dur = 600 }) {
   return <>{rp(d)}</>;
 }
 
+// ─── Parse coordinates from Google Maps paste ───
+function parseCoordinates(text) {
+  if (!text || !text.trim()) return null;
+  const s = text.trim();
+  // Direct "lat, lng" format (e.g. "-6.259284, 106.688127")
+  const direct = s.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+  if (direct) return { lat: parseFloat(direct[1]), lng: parseFloat(direct[2]) };
+  // Google Maps URL with @lat,lng pattern
+  const urlAt = s.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (urlAt) return { lat: parseFloat(urlAt[1]), lng: parseFloat(urlAt[2]) };
+  // Google Maps URL with ?q=lat,lng or /place/lat,lng
+  const urlQ = s.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (urlQ) return { lat: parseFloat(urlQ[1]), lng: parseFloat(urlQ[2]) };
+  return null;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
@@ -248,19 +264,21 @@ export default function EcoChain() {
   const [profile, setProfile] = useState(null);
   const [token, setToken] = useState(null);
   const [authMode, setAuthMode] = useState("login"); // login | register
-  const [authForm, setAuthForm] = useState({ email: "", password: "", name: "", role: "user" });
+  const [authForm, setAuthForm] = useState({ email: "", password: "", confirmPassword: "", name: "", role: "user", location: "" });
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
   // ─── DATA STATE ───
-  const [prices, setPrices] = useState([]);
+  const [pelapakPrices, setPelapakPrices] = useState([]);
   const [dropPoints, setDropPoints] = useState([]);
   const [bankSampah, setBankSampah] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [txItems, setTxItems] = useState([]);
-  const [margins, setMargins] = useState(null);
   const [pickups, setPickups] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [pelapakList, setPelapakList] = useState([]);
+  const [myEntity, setMyEntity] = useState(null);
+  const [selectedDpForPrices, setSelectedDpForPrices] = useState(null);
 
   // ─── UI STATE ───
   const [tab, setTab] = useState("prices");
@@ -271,6 +289,11 @@ export default function EcoChain() {
 
   // New Transaction form
   const [txForm, setTxForm] = useState({ dp: "", items: [{ code: "", weight: "" }] });
+
+  // Pelapak price management
+  const [priceForm, setPriceForm] = useState({ item_code: "", item_name: "", category: "", unit: "kg", price_per_kg: "" });
+  const [csvUploading, setCsvUploading] = useState(false);
+  const csvInputRef = useRef(null);
 
   // ─── SCAN STATE ───
   const [scanning, setScanning] = useState(false);
@@ -298,8 +321,27 @@ export default function EcoChain() {
         setToken(s.token);
         setUser(s.user);
         setProfile(s.profile);
+        resolveMyEntity(s.profile, s.token);
       } catch { /* ignore */ }
     }
+  }, []);
+
+  // ─── RESOLVE MY ENTITY ───
+  const resolveMyEntity = useCallback(async (prof, tk) => {
+    if (!prof || !tk) return;
+    try {
+      if (prof.role === "bank") {
+        const res = await sb.query("bank_sampah", `user_id=eq.${prof.id}`, tk).catch(() => []);
+        setMyEntity(res?.[0] || null);
+      } else if (prof.role === "dp") {
+        const res = await sb.query("drop_points", `user_id=eq.${prof.id}`, tk).catch(() => []);
+        setMyEntity(res?.[0] || null);
+      } else if (prof.role === "pelapak") {
+        setMyEntity({ id: prof.id, role: "pelapak" });
+      } else {
+        setMyEntity(null);
+      }
+    } catch { setMyEntity(null); }
   }, []);
 
   // ─── LOAD DATA ───
@@ -307,18 +349,18 @@ export default function EcoChain() {
     const tk = t || token;
     setLoading(true);
     try {
-      const [pr, dp, bs, mc, cat] = await Promise.all([
-        sb.query("v_prices", "order=category.asc,item_code.asc", tk).catch(() => []),
+      const [pp, dp, bs, cat, pelList] = await Promise.all([
+        sb.query("pelapak_prices", "order=category.asc,item_code.asc", tk).catch(() => []),
         sb.query("drop_points", "order=id.asc", tk).catch(() => []),
         sb.query("bank_sampah", "order=id.asc", tk).catch(() => []),
-        sb.query("margin_config", "id=eq.1", tk).catch(() => []),
         sb.query("waste_categories", "order=sort_order.asc", tk).catch(() => []),
+        sb.query("profiles", "role=eq.pelapak&select=id,name,email", tk).catch(() => []),
       ]);
-      setPrices(pr || []);
+      setPelapakPrices(pp || []);
       setDropPoints(dp || []);
       setBankSampah(bs || []);
-      setMargins(mc?.[0] || null);
       setCategories(cat || []);
+      setPelapakList(pelList || []);
       if (!catFilter && cat?.length) setCatFilter(cat[0].code);
 
       // Load transactions + items if authenticated
@@ -345,13 +387,13 @@ export default function EcoChain() {
       (async () => {
         setLoading(true);
         try {
-          const [pr, dp, bs, cat] = await Promise.all([
-            sb.query("v_prices", "order=category.asc,item_code.asc").catch(() => []),
+          const [pp, dp, bs, cat] = await Promise.all([
+            sb.query("pelapak_prices", "order=category.asc,item_code.asc").catch(() => []),
             sb.query("drop_points", "order=id.asc").catch(() => []),
             sb.query("bank_sampah", "order=id.asc").catch(() => []),
             sb.query("waste_categories", "order=sort_order.asc").catch(() => []),
           ]);
-          setPrices(pr || []);
+          setPelapakPrices(pp || []);
           setDropPoints(dp || []);
           setBankSampah(bs || []);
           setCategories(cat || []);
@@ -366,12 +408,23 @@ export default function EcoChain() {
   const handleAuth = async (e) => {
     e.preventDefault();
     setAuthError("");
+    if (authMode === "register" && authForm.password !== authForm.confirmPassword) {
+      setAuthError("Password tidak cocok!");
+      return;
+    }
+    if (authMode === "register" && ["dp", "bank", "pelapak"].includes(authForm.role) && !parseCoordinates(authForm.location)) {
+      setAuthError("Koordinat lokasi tidak valid. Gunakan format: -6.259284, 106.688127");
+      return;
+    }
     setAuthLoading(true);
     try {
       if (authMode === "register") {
-        const res = await sb.signUp(authForm.email, authForm.password, {
-          name: authForm.name, role: authForm.role,
-        });
+        const meta = { name: authForm.name, role: authForm.role };
+        if (["dp", "bank", "pelapak"].includes(authForm.role)) {
+          const coords = parseCoordinates(authForm.location);
+          if (coords) { meta.lat = coords.lat; meta.lng = coords.lng; }
+        }
+        const res = await sb.signUp(authForm.email, authForm.password, meta);
         if (res.error) throw new Error(res.error.message || res.msg || "Registrasi gagal");
         if (res.access_token) {
           const u = res.user || (await sb.getUser(res.access_token));
@@ -387,6 +440,7 @@ export default function EcoChain() {
           setProfile(prof);
           localStorage.setItem("eco_session", JSON.stringify({ token: res.access_token, user: u, profile: prof }));
           loadData(res.access_token);
+          resolveMyEntity(prof, res.access_token);
           flash("✅ Registrasi berhasil! Selamat datang.");
         } else {
           flash("📧 Cek email untuk verifikasi akun.", "info");
@@ -408,6 +462,7 @@ export default function EcoChain() {
         setProfile(prof);
         localStorage.setItem("eco_session", JSON.stringify({ token: res.access_token, user: u, profile: prof }));
         loadData(res.access_token);
+        resolveMyEntity(prof, res.access_token);
         flash(`✅ Selamat datang, ${prof?.name || "User"}!`);
       }
     } catch (err) {
@@ -419,6 +474,7 @@ export default function EcoChain() {
   const logout = () => {
     setUser(null); setProfile(null); setToken(null);
     setTransactions([]); setTxItems([]); setPickups([]);
+    setMyEntity(null); setSelectedDpForPrices(null);
     localStorage.removeItem("eco_session");
     flash("👋 Berhasil keluar.");
   };
@@ -438,7 +494,7 @@ export default function EcoChain() {
         status: "pending",
       }, token);
       for (const item of txForm.items) {
-        const found = prices.find(p => p.item_code === item.code);
+        const found = effectivePrices.find(p => p.item_code === item.code);
         if (found) {
           await sb.insert("transaction_items", {
             transaction_id: txId,
@@ -456,19 +512,109 @@ export default function EcoChain() {
     }
   };
 
-  // ─── UPDATE MARGIN ───
-  const updateMargin = async (key, val) => {
-    if (!margins) return;
+  // ─── PER-ENTITY PRICING FUNCTIONS ───
+  const updateMyMargin = async (newMargin) => {
+    if (!myEntity || !profile) return;
     try {
-      await sb.update("margin_config", { id: 1 }, {
-        [key]: val, updated_at: new Date().toISOString(), updated_by: user?.id,
-      }, token);
-      setMargins(prev => ({ ...prev, [key]: val }));
-      loadData(); // reload cascading prices
-      flash("✅ Margin updated — harga cascade di-refresh!");
-    } catch (e) {
-      flash(`❌ ${e.message}`, "err");
+      if (profile.role === "bank") {
+        await sb.update("bank_sampah", { id: myEntity.id }, { margin: newMargin }, token);
+      } else if (profile.role === "dp") {
+        await sb.update("drop_points", { id: myEntity.id }, { margin: newMargin }, token);
+      }
+      setMyEntity(prev => ({ ...prev, margin: newMargin }));
+      flash("✅ Margin diperbarui!");
+    } catch (e) { flash(`❌ ${e.message}`, "err"); }
+  };
+
+  const updateBankPelapak = async (pelapakId) => {
+    if (!myEntity || profile?.role !== "bank") return;
+    try {
+      await sb.update("bank_sampah", { id: myEntity.id }, { pelapak_id: pelapakId || null }, token);
+      setMyEntity(prev => ({ ...prev, pelapak_id: pelapakId || null }));
+      flash("✅ Pelapak dipilih!");
+    } catch (e) { flash(`❌ ${e.message}`, "err"); }
+  };
+
+  const updateDpBank = async (bankId) => {
+    if (!myEntity || profile?.role !== "dp") return;
+    try {
+      await sb.update("drop_points", { id: myEntity.id }, { bank_sampah_id: bankId ? parseInt(bankId) : null }, token);
+      setMyEntity(prev => ({ ...prev, bank_sampah_id: bankId ? parseInt(bankId) : null }));
+      flash("✅ Bank Sampah dipilih!");
+    } catch (e) { flash(`❌ ${e.message}`, "err"); }
+  };
+
+  const addPelapakPrice = async () => {
+    if (!priceForm.item_code || !priceForm.item_name || !priceForm.price_per_kg) {
+      flash("❌ Lengkapi kode, nama, dan harga!", "err"); return;
     }
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/pelapak_prices?on_conflict=pelapak_id,item_code`, {
+        method: "POST",
+        headers: { ...sb.headers(token), Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify({
+          pelapak_id: user.id,
+          item_code: priceForm.item_code.trim(),
+          item_name: priceForm.item_name.trim(),
+          category: priceForm.category || "other",
+          unit: priceForm.unit || "kg",
+          price_per_kg: parseFloat(priceForm.price_per_kg),
+          updated_at: new Date().toISOString(),
+        }),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.message || `Insert failed`); }
+      flash(`✅ Harga ${priceForm.item_name} disimpan!`);
+      setPriceForm({ item_code: "", item_name: "", category: "", unit: "kg", price_per_kg: "" });
+      loadData();
+    } catch (e) { flash(`❌ ${e.message}`, "err"); }
+  };
+
+  const deletePelapakPrice = async (priceId) => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/pelapak_prices?id=eq.${priceId}`, {
+        method: "DELETE", headers: sb.headers(token),
+      });
+      if (!r.ok) throw new Error(`Delete failed: ${r.status}`);
+      flash("✅ Item dihapus!");
+      loadData();
+    } catch (e) { flash(`❌ ${e.message}`, "err"); }
+  };
+
+  const handleCsvUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvUploading(true);
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter(l => l.trim());
+      const start = lines[0]?.toLowerCase().includes("item_code") ? 1 : 0;
+      const items = [];
+      for (let i = start; i < lines.length; i++) {
+        const cols = lines[i].split(",").map(c => c.trim());
+        if (cols.length >= 3 && cols[0] && parseFloat(cols[cols.length - 1]) >= 0) {
+          items.push({
+            pelapak_id: user.id,
+            item_code: cols[0],
+            item_name: cols[1],
+            category: cols[2] || "other",
+            unit: cols.length >= 5 ? cols[3] : "kg",
+            price_per_kg: parseFloat(cols[cols.length - 1]),
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+      if (!items.length) throw new Error("Tidak ada baris valid ditemukan");
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/pelapak_prices?on_conflict=pelapak_id,item_code`, {
+        method: "POST",
+        headers: { ...sb.headers(token), Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify(items),
+      });
+      if (!r.ok) throw new Error(`Upload failed: ${r.status}`);
+      flash(`✅ ${items.length} item harga diupload!`);
+      loadData();
+    } catch (err) { flash(`❌ CSV Error: ${err.message}`, "err"); }
+    setCsvUploading(false);
+    e.target.value = "";
   };
 
   // ─── UPDATE TX STATUS ───
@@ -492,16 +638,16 @@ export default function EcoChain() {
       if (!GEMINI_API_KEY) {
         // Demo fallback
         await new Promise(r => setTimeout(r, 1500));
-        const demoItems = prices.slice(0, 3).map((p, i) => ({
+        const demoItems = effectivePrices.slice(0, 3).map((p, i) => ({
           item: p.name, code: p.item_code, cat: p.category,
           weight: [2.5, 1.8, 3.2][i] || 1.0,
           tip: i === 0 ? "💡 Pisahkan per kategori untuk harga maksimal." : null,
         }));
         setScanResults({ label: "Demo Scan (tanpa API key)", results: demoItems });
       } else {
-        const prompt = buildWastePrompt(prices);
+        const prompt = buildWastePrompt(effectivePrices);
         const apiRes = await callGeminiVision(base64, prompt);
-        const parsed = parseGeminiResponse(apiRes, prices);
+        const parsed = parseGeminiResponse(apiRes, effectivePrices);
         setScanResults(parsed || { label: "Tidak terdeteksi", results: [] });
       }
     } catch (err) {
@@ -512,13 +658,86 @@ export default function EcoChain() {
     e.target.value = "";
   };
 
+  // ─── COMPUTED: effectivePrices ───
+  const effectivePrices = useMemo(() => {
+    // Normalize pelapakPrices to have .name field for compatibility
+    const normalize = (p, extra = {}) => ({
+      ...p,
+      name: p.item_name || p.name,
+      pelapak_price: Number(p.price_per_kg),
+      ...extra,
+    });
+
+    if (profile?.role === "pelapak") {
+      return pelapakPrices.filter(p => p.pelapak_id === user?.id).map(p => normalize(p));
+    }
+    if (profile?.role === "bank" && myEntity?.pelapak_id) {
+      const margin = Number(myEntity.margin) || 0;
+      return pelapakPrices
+        .filter(p => p.pelapak_id === myEntity.pelapak_id)
+        .map(p => normalize(p, { bank_price: Number(p.price_per_kg) * (1 - margin) }));
+    }
+    if (profile?.role === "dp" && myEntity?.bank_sampah_id) {
+      const bs = bankSampah.find(b => b.id === myEntity.bank_sampah_id);
+      if (!bs || !bs.pelapak_id) return [];
+      const bankMargin = Number(bs.margin) || 0;
+      const dpMargin = Number(myEntity.margin) || 0;
+      return pelapakPrices
+        .filter(p => p.pelapak_id === bs.pelapak_id)
+        .map(p => {
+          const pp = Number(p.price_per_kg);
+          const bp = pp * (1 - bankMargin);
+          return normalize(p, { bank_price: bp, dp_price: bp * (1 - dpMargin) });
+        });
+    }
+    // End user or public — use selected DP chain
+    if (selectedDpForPrices) {
+      const dp = dropPoints.find(d => String(d.id) === String(selectedDpForPrices));
+      if (!dp?.bank_sampah_id) return [];
+      const bs = bankSampah.find(b => b.id === dp.bank_sampah_id);
+      if (!bs?.pelapak_id) return [];
+      const bankMargin = Number(bs.margin) || 0;
+      const dpMargin = Number(dp.margin) || 0;
+      return pelapakPrices
+        .filter(p => p.pelapak_id === bs.pelapak_id)
+        .map(p => {
+          const pp = Number(p.price_per_kg);
+          const bp = pp * (1 - bankMargin);
+          return normalize(p, { bank_price: bp, dp_price: bp * (1 - dpMargin) });
+        });
+    }
+    // Fallback: show all unique items with pelapak prices only
+    const seen = new Set();
+    return pelapakPrices.filter(p => {
+      if (seen.has(p.item_code)) return false;
+      seen.add(p.item_code);
+      return true;
+    }).map(p => normalize(p));
+  }, [pelapakPrices, profile, user, myEntity, bankSampah, dropPoints, selectedDpForPrices]);
+
+  const filteredPrices = useMemo(() =>
+    catFilter ? effectivePrices.filter(p => p.category === catFilter) : effectivePrices
+    , [effectivePrices, catFilter]);
+
+  const getTxTotal = (txId) => {
+    const items = txItems.filter(i => i.transaction_id === txId);
+    return items.reduce((sum, it) => {
+      const p = effectivePrices.find(pr => pr.item_code === it.waste_code);
+      const price = profile?.role === "pelapak" ? (p?.pelapak_price || 0)
+        : profile?.role === "bank" ? (p?.bank_price || 0)
+          : (p?.dp_price || p?.pelapak_price || 0);
+      return sum + price * Number(it.weight_kg);
+    }, 0);
+  };
+
   // ─── CHAT SYSTEM PROMPT ───
   const buildChatSystemPrompt = useCallback(() => {
     let priceSummary = "";
     const grouped = {};
-    for (const p of prices) {
+    for (const p of effectivePrices) {
       if (!grouped[p.category]) grouped[p.category] = { icon: "", label: p.category, items: [] };
-      grouped[p.category].items.push(`${p.name} Rp${Math.round(p.pelapak_price).toLocaleString("id-ID")}${p.unit !== "kg" ? `/${p.unit}` : "/kg"}`);
+      const displayPrice = p.dp_price || p.bank_price || p.pelapak_price || 0;
+      grouped[p.category].items.push(`${p.name} Rp${Math.round(displayPrice).toLocaleString("id-ID")}${p.unit !== "kg" ? `/${p.unit}` : "/kg"}`);
     }
     const catMap = {};
     for (const c of categories) catMap[c.code] = c;
@@ -535,12 +754,11 @@ export default function EcoChain() {
       `- ${bs.name} (${bs.address}) — Rating: ${bs.rating || "-"}/5, Jam: ${bs.operating_hours || "-"}`
     ).join("\n");
 
-    const m = margins || { pelapak_to_bank: 0.15, bank_to_drop_point: 0.20, drop_point_to_user: 0.25 };
-    const cascadeInfo = `Model Harga Cascade (4 level):
-- Pelapak (harga dasar/pasar)
-- Bank Sampah: Pelapak × ${((1 - Number(m.pelapak_to_bank)) * 100).toFixed(0)}% (margin ${(Number(m.pelapak_to_bank) * 100).toFixed(0)}%)
-- Drop Point: Bank × ${((1 - Number(m.bank_to_drop_point)) * 100).toFixed(0)}% (margin ${(Number(m.bank_to_drop_point) * 100).toFixed(0)}%)
-- End User: DP × ${((1 - Number(m.drop_point_to_user)) * 100).toFixed(0)}% (margin ${(Number(m.drop_point_to_user) * 100).toFixed(0)}%)`;
+    const cascadeInfo = `Model Harga Cascade (3 level per-entity):
+- Pelapak: menetapkan harga dasar per item
+- Bank Sampah: memilih Pelapak, lalu harga = harga Pelapak × (1 - margin Bank)
+- Drop Point: memilih Bank Sampah, lalu harga = harga Bank × (1 - margin DP)
+Masyarakat membeli di harga Drop Point.`;
 
     return `Kamu adalah EcoChain Assistant, asisten AI untuk marketplace ekonomi sirkular sampah di area Pondok Aren, Tangerang Selatan, Indonesia.
 
@@ -551,7 +769,7 @@ PERAN:
 - Gunakan emoji secukupnya untuk keramahan.
 - Jika ditanya hal di luar topik sampah/daur ulang, arahkan kembali dengan sopan.
 
-HARGA SAMPAH TERKINI (harga level Pelapak per kg, kecuali tertulis lain):
+HARGA SAMPAH TERKINI (harga per kg):
 ${priceSummary}
 ${cascadeInfo}
 
@@ -567,8 +785,8 @@ TIPS PENTING:
 - Minyak jelantah harus disaring, jangan campur air
 - Pisahkan sampah per kategori untuk harga maksimal
 
-Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu tampilkan harga level USER (setelah cascade), bukan harga pelapak, kecuali diminta spesifik.`;
-  }, [prices, dropPoints, bankSampah, margins, categories]);
+Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan harga level Drop Point (harga untuk masyarakat), kecuali diminta spesifik.`;
+  }, [effectivePrices, dropPoints, bankSampah, categories]);
 
   // ─── SEND CHAT ───
   const sendChat = async (directQuery) => {
@@ -583,8 +801,8 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
       const lower = q.toLowerCase();
       let reply = "Halo! Saya EcoChain Assistant. Saya bisa bantu info harga sampah, lokasi drop point, dan tips daur ulang. 🌱";
       if (lower.includes("harga") || lower.includes("price")) {
-        const sample = prices.slice(0, 5).map(p => `${p.name}: ${rp(p.user_price)}/${p.unit}`).join("\n");
-        reply = `Berikut beberapa harga sampah terkini (level User):\n${sample}\n\nMau tanya harga item spesifik? 😊`;
+        const sample = effectivePrices.slice(0, 5).map(p => `${p.name}: ${rp(p.dp_price || p.pelapak_price)}/${p.unit}`).join("\n");
+        reply = `Berikut beberapa harga sampah terkini:\n${sample}\n\nMau tanya harga item spesifik? 😊`;
       } else if (lower.includes("drop point") || lower.includes("lokasi")) {
         reply = dropPoints.length
           ? `Ada ${dropPoints.length} Drop Point aktif:\n${dropPoints.map(d => `📍 ${d.name} — ${d.address}`).join("\n")}`
@@ -629,23 +847,6 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [aiChat, chatLoading]);
-
-  // ─── COMPUTED ───
-  const filteredPrices = useMemo(() =>
-    catFilter ? prices.filter(p => p.category === catFilter) : prices
-    , [prices, catFilter]);
-
-  const getTxTotal = (txId) => {
-    const items = txItems.filter(i => i.transaction_id === txId);
-    return items.reduce((sum, it) => {
-      const p = prices.find(pr => pr.item_code === it.waste_code);
-      const price = profile?.role === "user" ? (p?.user_price || 0)
-        : profile?.role === "dp" ? (p?.dp_price || 0)
-          : profile?.role === "bank" ? (p?.bank_price || 0)
-            : (p?.pelapak_price || 0);
-      return sum + price * Number(it.weight_kg);
-    }, 0);
-  };
 
   const roleLabel = { user: "End User", dp: "Drop Point", bank: "Bank Sampah", pelapak: "Pelapak" };
   const roleIcon = { user: "👤", dp: "📍", bank: "🏦", pelapak: "🏭" };
@@ -756,6 +957,13 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                 </div>
 
                 {authMode === "register" && (
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>Konfirmasi Password</label>
+                    <input type="password" value={authForm.confirmPassword} onChange={e => setAuthForm(f => ({ ...f, confirmPassword: e.target.value }))} placeholder="••••••••" required minLength={6} />
+                  </div>
+                )}
+
+                {authMode === "register" && (
                   <div style={{ marginBottom: 18 }}>
                     <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 6, display: "block" }}>Peran</label>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -772,6 +980,21 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {authMode === "register" && ["dp", "bank", "pelapak"].includes(authForm.role) && (
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>Koordinat Lokasi</label>
+                    <input value={authForm.location} onChange={e => setAuthForm(f => ({ ...f, location: e.target.value }))}
+                      placeholder="Paste dari Google Maps, cth: -6.259284, 106.688127" required />
+                    {authForm.location && (() => {
+                      const c = parseCoordinates(authForm.location);
+                      return c
+                        ? <div style={{ fontSize: 10, color: "var(--g)", marginTop: 4, fontFamily: "var(--m)" }}>Lat: {c.lat.toFixed(6)}, Lng: {c.lng.toFixed(6)}</div>
+                        : <div style={{ fontSize: 10, color: "var(--r)", marginTop: 4 }}>Format tidak dikenali. Gunakan format: -6.259284, 106.688127</div>;
+                    })()}
+                    <div style={{ fontSize: 9, color: "var(--t2)", marginTop: 3 }}>Buka Google Maps &rarr; klik kanan lokasi &rarr; salin koordinat</div>
                   </div>
                 )}
 
@@ -796,7 +1019,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                 {filteredPrices.slice(0, 8).map((p, i) => (
                   <div key={p.item_code} style={{ display: "flex", justifyContent: "space-between", padding: "8px 14px", borderTop: i ? "1px solid var(--bdr)" : "none", fontSize: 11 }}>
                     <span style={{ color: "var(--t)" }}><span style={{ fontFamily: "var(--m)", fontSize: 9, color: "var(--t2)", marginRight: 6 }}>{p.item_code}</span>{p.name}</span>
-                    <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: "var(--g)" }}>{rp(p.user_price)}<span style={{ fontSize: 9, color: "var(--t2)", fontWeight: 400 }}>/{p.unit}</span></span>
+                    <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: "var(--g)" }}>{rp(p.dp_price || p.pelapak_price)}<span style={{ fontSize: 9, color: "var(--t2)", fontWeight: 400 }}>/{p.unit}</span></span>
                   </div>
                 ))}
               </div>
@@ -827,7 +1050,8 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                 { id: "network", label: "📍 Network", show: true },
                 { id: "tx", label: "📋 Transaksi", show: !!token },
                 { id: "newtx", label: "➕ Buat TX", show: ["dp", "bank"].includes(profile.role) },
-                { id: "margins", label: "⚙️ Margin", show: ["bank", "pelapak"].includes(profile.role) },
+                { id: "kelola", label: "📦 Kelola Harga", show: profile.role === "pelapak" },
+                { id: "settings", label: "⚙️ Pengaturan", show: ["bank", "dp"].includes(profile.role) },
                 { id: "pickup", label: "🚛 Pickup", show: ["dp", "bank"].includes(profile.role) },
               ].filter(t => t.show).map(t => (
                 <button key={t.id} className="bt" onClick={() => setTab(t.id)} style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, background: tab === t.id ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.02)", color: tab === t.id ? "var(--g)" : "var(--t2)", border: `1px solid ${tab === t.id ? "rgba(34,197,94,.25)" : "var(--bdr)"}`, whiteSpace: "nowrap" }}>
@@ -841,35 +1065,77 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
             {/* ═── PRICES TAB ──═ */}
             {!loading && tab === "prices" && (
               <div className="fu">
+                {/* DP selector for end users */}
+                {(profile.role === "user") && (
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>Pilih Drop Point untuk lihat harga:</label>
+                    <select value={selectedDpForPrices || ""} onChange={e => setSelectedDpForPrices(e.target.value || null)}>
+                      <option value="">-- Pilih Drop Point --</option>
+                      {dropPoints.filter(d => d.bank_sampah_id).map(dp => <option key={dp.id} value={dp.id}>{dp.name}</option>)}
+                    </select>
+                  </div>
+                )}
+
                 <div style={{ display: "flex", gap: 4, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
                   {categories.map(c => (
                     <button key={c.code} className="bt" onClick={() => setCatFilter(c.code)} style={{ padding: "6px 12px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", background: catFilter === c.code ? `${c.accent}20` : "rgba(255,255,255,.02)", color: catFilter === c.code ? c.accent : "var(--t2)", border: `1px solid ${catFilter === c.code ? `${c.accent}30` : "var(--bdr)"}` }}>
-                      {c.icon} {c.label} <span style={{ fontSize: 9, opacity: .6 }}>({prices.filter(p => p.category === c.code).length})</span>
+                      {c.icon} {c.label} <span style={{ fontSize: 9, opacity: .6 }}>({effectivePrices.filter(p => p.category === c.code).length})</span>
                     </button>
                   ))}
                 </div>
 
                 <div className="c" style={{ overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 1fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
-                    <span>ITEM</span>
-                    <span style={{ textAlign: "right", color: "var(--p)" }}>🏭 PELAPAK</span>
-                    <span style={{ textAlign: "right", color: "var(--b)" }}>🏦 BANK</span>
-                    <span style={{ textAlign: "right", color: "var(--y)" }}>📍 DP</span>
-                    <span style={{ textAlign: "right", color: "var(--g)" }}>👤 USER</span>
-                  </div>
+                  {/* Header row — varies by role */}
+                  {profile.role === "pelapak" && (
+                    <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
+                      <span>ITEM</span>
+                      <span style={{ textAlign: "right", color: "var(--p)" }}>🏭 HARGA</span>
+                    </div>
+                  )}
+                  {profile.role === "bank" && (
+                    <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
+                      <span>ITEM</span>
+                      <span style={{ textAlign: "right", color: "var(--p)" }}>🏭 PELAPAK</span>
+                      <span style={{ textAlign: "right", color: "var(--b)" }}>🏦 BANK</span>
+                    </div>
+                  )}
+                  {profile.role === "dp" && (
+                    <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
+                      <span>ITEM</span>
+                      <span style={{ textAlign: "right", color: "var(--b)" }}>🏦 BANK</span>
+                      <span style={{ textAlign: "right", color: "var(--y)" }}>📍 DP</span>
+                    </div>
+                  )}
+                  {profile.role === "user" && (
+                    <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
+                      <span>ITEM</span>
+                      <span style={{ textAlign: "right", color: "var(--y)" }}>📍 HARGA</span>
+                    </div>
+                  )}
+                  {/* Data rows */}
                   {filteredPrices.map((p, i) => (
-                    <div key={p.item_code} style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 1fr", padding: "8px 16px", borderTop: "1px solid var(--bdr)", fontSize: 11, alignItems: "center" }}>
+                    <div key={p.item_code} style={{ display: "grid", gridTemplateColumns: profile.role === "pelapak" || profile.role === "user" ? "3fr 1fr" : "2.5fr 1fr 1fr", padding: "8px 16px", borderTop: "1px solid var(--bdr)", fontSize: 11, alignItems: "center" }}>
                       <span><span style={{ fontFamily: "var(--m)", fontSize: 9, color: "var(--t2)", marginRight: 6 }}>{p.item_code}</span><span style={{ color: "var(--w)" }}>{p.name}</span>{p.unit !== "kg" && <span style={{ fontSize: 8, color: "var(--t2)", marginLeft: 4 }}>/{p.unit}</span>}</span>
-                      <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--p)" }}>{rp(p.pelapak_price)}</span>
-                      <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--b)" }}>{rp(p.bank_price)}</span>
-                      <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--y)" }}>{rp(p.dp_price)}</span>
-                      <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--g)" }}>{rp(p.user_price)}</span>
+                      {profile.role === "pelapak" && (
+                        <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--p)" }}>{rp(p.pelapak_price)}</span>
+                      )}
+                      {profile.role === "bank" && (<>
+                        <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--p)" }}>{rp(p.pelapak_price)}</span>
+                        <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--b)" }}>{rp(p.bank_price)}</span>
+                      </>)}
+                      {profile.role === "dp" && (<>
+                        <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--b)" }}>{rp(p.bank_price)}</span>
+                        <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--y)" }}>{rp(p.dp_price)}</span>
+                      </>)}
+                      {profile.role === "user" && (
+                        <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--y)" }}>{rp(p.dp_price || p.pelapak_price)}</span>
+                      )}
                     </div>
                   ))}
                 </div>
                 <div style={{ marginTop: 8, fontSize: 10, color: "var(--t2)", fontFamily: "var(--m)" }}>
-                  {prices.length} items • Margin: {margins ? `${(margins.pelapak_to_bank * 100).toFixed(0)}% / ${(margins.bank_to_drop_point * 100).toFixed(0)}% / ${(margins.drop_point_to_user * 100).toFixed(0)}%` : "..."}
-                  • Harga dari v_prices (live cascade)
+                  {effectivePrices.length} items
+                  {myEntity?.margin != null && ` • Margin: ${Math.round(Number(myEntity.margin) * 100)}%`}
                 </div>
               </div>
             )}
@@ -909,7 +1175,8 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                       <div style={{ padding: 20, textAlign: "center", color: "var(--t2)" }}>Tidak terdeteksi sampah yang bisa didaur ulang.</div>
                     )}
                     {scanResults.results.map((r, i) => {
-                      const p = prices.find(pr => pr.item_code === r.code);
+                      const p = effectivePrices.find(pr => pr.item_code === r.code);
+                      const unitPrice = p?.dp_price || p?.pelapak_price || 0;
                       return (
                         <div key={i} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "12px 16px", marginBottom: 6 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -918,8 +1185,8 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                               <span style={{ fontFamily: "var(--m)", fontSize: 9, color: "var(--t2)", marginLeft: 8 }}>{r.code}</span>
                             </div>
                             <div style={{ textAlign: "right" }}>
-                              <div style={{ fontFamily: "var(--m)", fontWeight: 700, color: "var(--g)", fontSize: 13 }}>{p ? rp(p.user_price * r.weight) : "-"}</div>
-                              <div style={{ fontSize: 9, color: "var(--t2)" }}>{r.weight} kg × {p ? rp(p.user_price) : "?"}/{p?.unit || "kg"}</div>
+                              <div style={{ fontFamily: "var(--m)", fontWeight: 700, color: "var(--g)", fontSize: 13 }}>{p ? rp(unitPrice * r.weight) : "-"}</div>
+                              <div style={{ fontSize: 9, color: "var(--t2)" }}>{r.weight} kg × {p ? rp(unitPrice) : "?"}/{p?.unit || "kg"}</div>
                             </div>
                           </div>
                           {r.tip && <div style={{ fontSize: 10, color: "var(--y)", marginTop: 4 }}>{r.tip}</div>}
@@ -928,11 +1195,11 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                     })}
                     {scanResults.results.length > 0 && (
                       <div className="c" style={{ padding: "14px 18px", marginTop: 8, background: "rgba(34,197,94,.06)", border: "1px solid rgba(34,197,94,.15)" }}>
-                        <div style={{ fontSize: 10, color: "var(--t2)" }}>Estimasi Total (level User)</div>
+                        <div style={{ fontSize: 10, color: "var(--t2)" }}>Estimasi Total</div>
                         <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--d)", color: "var(--g)" }}>
                           {rp(scanResults.results.reduce((sum, r) => {
-                            const p = prices.find(pr => pr.item_code === r.code);
-                            return sum + (p?.user_price || 0) * r.weight;
+                            const p = effectivePrices.find(pr => pr.item_code === r.code);
+                            return sum + (p?.dp_price || p?.pelapak_price || 0) * r.weight;
                           }, 0))}
                         </div>
                         <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 2 }}>
@@ -1030,6 +1297,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                       <h4 style={{ fontSize: 13, fontWeight: 700, color: "var(--w)", fontFamily: "var(--d)", marginBottom: 2 }}>{dp.name}</h4>
                       <div style={{ fontSize: 10, color: "var(--t2)", marginBottom: 6 }}>{dp.address}</div>
                       <div style={{ fontSize: 10, color: "var(--t2)" }}>👤 {dp.operator_name || "-"} • {dp.type}</div>
+                      {dp.bank_sampah_id && <div style={{ fontSize: 9, color: "var(--b)", marginTop: 2 }}>🏦 {bankSampah.find(b => b.id === dp.bank_sampah_id)?.name || "?"} • Margin: {Math.round(Number(dp.margin) * 100)}%</div>}
                       {/* Stock bar */}
                       <div style={{ marginTop: 8 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "var(--t2)", marginBottom: 2 }}>
@@ -1069,6 +1337,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                         {bs.monthly_capacity_kg && <div>Cap: {bs.monthly_capacity_kg} kg/bln</div>}
                       </div>
                     </div>
+                    {bs.pelapak_id && <div style={{ marginTop: 4, fontSize: 9, color: "var(--p)" }}>🏭 Pelapak: {pelapakList.find(pl => pl.id === bs.pelapak_id)?.name || "?"} • Margin: {Math.round(Number(bs.margin) * 100)}%</div>}
                     {bs.specialty && <div style={{ marginTop: 6 }}><Badge color="var(--c)" outline>{bs.specialty}</Badge></div>}
                   </div>
                 ))}
@@ -1136,7 +1405,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                     <div key={idx} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
                       <select value={item.code} onChange={e => { const items = [...txForm.items]; items[idx].code = e.target.value; setTxForm(f => ({ ...f, items })); }} style={{ flex: 2 }}>
                         <option value="">Pilih item</option>
-                        {prices.map(p => <option key={p.item_code} value={p.item_code}>{p.item_code} — {p.name} ({rp(p.dp_price)}/{p.unit})</option>)}
+                        {effectivePrices.map(p => <option key={p.item_code} value={p.item_code}>{p.item_code} — {p.name} ({rp(p.dp_price || p.pelapak_price)}/{p.unit})</option>)}
                       </select>
                       <input type="number" step="0.1" min="0.1" placeholder="Berat (kg)" value={item.weight}
                         onChange={e => { const items = [...txForm.items]; items[idx].weight = e.target.value; setTxForm(f => ({ ...f, items })); }}
@@ -1156,8 +1425,8 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
                       <div style={{ fontSize: 10, color: "var(--t2)" }}>Estimasi Total (level DP)</div>
                       <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--d)", color: "var(--g)" }}>
                         {rp(txForm.items.reduce((s, it) => {
-                          const p = prices.find(pr => pr.item_code === it.code);
-                          return s + (p?.dp_price || 0) * (parseFloat(it.weight) || 0);
+                          const p = effectivePrices.find(pr => pr.item_code === it.code);
+                          return s + (p?.dp_price || p?.pelapak_price || 0) * (parseFloat(it.weight) || 0);
                         }, 0))}
                       </div>
                     </div>
@@ -1171,64 +1440,170 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, selalu ta
               </div>
             )}
 
-            {/* ═── MARGIN TAB ──═ */}
-            {!loading && tab === "margins" && margins && (
+            {/* ═── KELOLA HARGA TAB (Pelapak) ──═ */}
+            {!loading && tab === "kelola" && profile.role === "pelapak" && (
               <div className="fu">
-                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 14 }}>⚙️ Margin Manager — Cascading Price Control</h3>
-                <div className="c" style={{ padding: 24 }}>
-                  {/* Cascade visual */}
-                  {(() => {
-                    const ex = prices.find(p => p.item_code === "3.1") || prices[0]; // Alumunium
-                    if (!ex) return null;
-                    return (
-                      <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 10, fontFamily: "var(--m)", color: "var(--t2)", marginBottom: 10 }}>
-                          LIVE CASCADE — {ex.name} ({rp(ex.pelapak_price)}/{ex.unit})
-                        </div>
-                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                          {[
-                            { l: "🏭 Pelapak", v: ex.pelapak_price, c: "var(--p)" },
-                            { l: "🏦 Bank", v: ex.bank_price, c: "var(--b)" },
-                            { l: "📍 DP", v: ex.dp_price, c: "var(--y)" },
-                            { l: "👤 User", v: ex.user_price, c: "var(--g)" },
-                          ].map((lv, i) => (
-                            <div key={i} style={{ flex: 1, display: "flex", alignItems: "center", gap: 4 }}>
-                              <div style={{ flex: 1, padding: "12px 4px", borderRadius: 10, textAlign: "center", background: `${lv.c}10`, border: `1px solid ${lv.c}22` }}>
-                                <div style={{ fontSize: 12 }}>{lv.l.split(" ")[0]}</div>
-                                <div style={{ fontSize: 9, color: "var(--t2)", marginTop: 1 }}>{lv.l.split(" ").slice(1).join(" ")}</div>
-                                <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "var(--m)", color: lv.c, marginTop: 3 }}>{rp(lv.v)}</div>
-                              </div>
-                              {i < 3 && <span style={{ color: "var(--t2)", fontSize: 10 }}>→</span>}
+                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 14 }}>📦 Kelola Harga Pelapak</h3>
+
+                {/* Manual entry form */}
+                <div className="c" style={{ padding: 22, marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)", marginBottom: 10 }}>Tambah / Update Harga Item</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 8, marginBottom: 8 }}>
+                    <input placeholder="Kode (cth: 1.1)" value={priceForm.item_code} onChange={e => setPriceForm(f => ({ ...f, item_code: e.target.value }))} />
+                    <input placeholder="Nama Item" value={priceForm.item_name} onChange={e => setPriceForm(f => ({ ...f, item_name: e.target.value }))} />
+                    <select value={priceForm.category} onChange={e => setPriceForm(f => ({ ...f, category: e.target.value }))}>
+                      <option value="">Kategori</option>
+                      {categories.map(c => <option key={c.code} value={c.code}>{c.icon} {c.label}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 8, marginBottom: 10 }}>
+                    <input placeholder="Unit" value={priceForm.unit} onChange={e => setPriceForm(f => ({ ...f, unit: e.target.value }))} />
+                    <input type="number" placeholder="Harga per kg (Rp)" value={priceForm.price_per_kg} onChange={e => setPriceForm(f => ({ ...f, price_per_kg: e.target.value }))} />
+                    <button className="bt" onClick={addPelapakPrice} style={{ padding: "10px 14px", background: "linear-gradient(135deg,#A855F7,#7C3AED)", color: "#fff", fontWeight: 700, fontSize: 12, border: "none" }}>+ Simpan</button>
+                  </div>
+                </div>
+
+                {/* CSV Upload */}
+                <div className="c" style={{ padding: 18, marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)" }}>Upload CSV</div>
+                      <div style={{ fontSize: 9, color: "var(--t2)", fontFamily: "var(--m)", marginTop: 2 }}>Format: item_code, item_name, category, unit, price_per_kg</div>
+                    </div>
+                    <input ref={csvInputRef} type="file" accept=".csv,.txt" onChange={handleCsvUpload} style={{ display: "none" }} />
+                    <button className="bt" onClick={() => csvInputRef.current?.click()} disabled={csvUploading}
+                      style={{ padding: "8px 18px", background: csvUploading ? "rgba(255,255,255,.04)" : "rgba(168,85,247,.12)", color: csvUploading ? "var(--t2)" : "var(--p)", fontWeight: 600, fontSize: 11, border: "1px solid rgba(168,85,247,.2)" }}>
+                      {csvUploading ? "⏳ Uploading..." : "📤 Pilih File CSV"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Current price list */}
+                <div className="c" style={{ overflow: "hidden" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "0.5fr 2fr 1fr 1fr 0.5fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
+                    <span>KODE</span><span>NAMA</span><span>KATEGORI</span><span style={{ textAlign: "right" }}>HARGA</span><span></span>
+                  </div>
+                  {effectivePrices.map(p => (
+                    <div key={p.id || p.item_code} style={{ display: "grid", gridTemplateColumns: "0.5fr 2fr 1fr 1fr 0.5fr", padding: "8px 16px", borderTop: "1px solid var(--bdr)", fontSize: 11, alignItems: "center" }}>
+                      <span style={{ fontFamily: "var(--m)", fontSize: 9, color: "var(--t2)" }}>{p.item_code}</span>
+                      <span style={{ color: "var(--w)" }}>{p.name}</span>
+                      <span style={{ fontSize: 10, color: "var(--t2)" }}>{p.category}</span>
+                      <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--p)" }}>{rp(p.pelapak_price)}/{p.unit}</span>
+                      <button className="bt" onClick={() => deletePelapakPrice(p.id)} style={{ padding: "4px 8px", background: "rgba(239,68,68,.08)", color: "var(--r)", fontSize: 9, fontWeight: 600, border: "1px solid rgba(239,68,68,.15)" }}>Hapus</button>
+                    </div>
+                  ))}
+                  {effectivePrices.length === 0 && <div style={{ padding: 24, textAlign: "center", color: "var(--t2)", fontSize: 12 }}>Belum ada harga. Tambah item atau upload CSV.</div>}
+                </div>
+              </div>
+            )}
+
+            {/* ═── SETTINGS TAB (Bank Sampah & Drop Point) ──═ */}
+            {!loading && tab === "settings" && ["bank", "dp"].includes(profile.role) && (
+              <div className="fu">
+                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 14 }}>⚙️ Pengaturan {profile.role === "bank" ? "Bank Sampah" : "Drop Point"}</h3>
+
+                {!myEntity && (
+                  <div className="c" style={{ padding: 20, background: "rgba(239,68,68,.06)", border: "1px solid rgba(239,68,68,.15)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--r)", marginBottom: 4 }}>Akun belum terhubung</div>
+                    <div style={{ fontSize: 11, color: "var(--t2)" }}>
+                      Akun Anda belum terhubung dengan {profile.role === "bank" ? "Bank Sampah" : "Drop Point"} manapun. Hubungi admin untuk menghubungkan akun Anda.
+                    </div>
+                  </div>
+                )}
+
+                {myEntity && profile.role === "bank" && (
+                  <div className="c" style={{ padding: 22 }}>
+                    {/* Pelapak selector */}
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>Pilih Pelapak Sumber</label>
+                      <select value={myEntity.pelapak_id || ""} onChange={e => updateBankPelapak(e.target.value)}>
+                        <option value="">-- Pilih Pelapak --</option>
+                        {pelapakList.map(pl => <option key={pl.id} value={pl.id}>{pl.name} ({pl.email})</option>)}
+                      </select>
+                    </div>
+
+                    {/* Margin slider */}
+                    <div style={{ marginBottom: 20 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 11 }}>
+                        <span style={{ color: "var(--t2)" }}>Margin Bank Sampah</span>
+                        <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: "var(--b)" }}>{Math.round(Number(myEntity.margin) * 100)}%</span>
+                      </div>
+                      <input type="range" min={0} max={50}
+                        value={Math.round(Number(myEntity.margin) * 100)}
+                        onChange={e => updateMyMargin(parseInt(e.target.value) / 100)}
+                        style={{ accentColor: "var(--b)" }} />
+                    </div>
+
+                    {/* Price preview */}
+                    {myEntity.pelapak_id && effectivePrices.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--w)", marginBottom: 8 }}>Preview Harga ({effectivePrices.length} item)</div>
+                        <div style={{ maxHeight: 200, overflow: "auto" }}>
+                          {effectivePrices.slice(0, 15).map(p => (
+                            <div key={p.item_code} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid var(--bdr)", fontSize: 10 }}>
+                              <span style={{ color: "var(--t)" }}>{p.name}</span>
+                              <span style={{ fontFamily: "var(--m)" }}>
+                                <span style={{ color: "var(--p)" }}>{rp(p.pelapak_price)}</span>
+                                <span style={{ color: "var(--t2)", margin: "0 4px" }}>→</span>
+                                <span style={{ color: "var(--b)", fontWeight: 600 }}>{rp(p.bank_price)}</span>
+                              </span>
                             </div>
                           ))}
                         </div>
                       </div>
-                    );
-                  })()}
+                    )}
+                    {myEntity.pelapak_id && effectivePrices.length === 0 && (
+                      <div style={{ padding: 14, textAlign: "center", color: "var(--t2)", fontSize: 11 }}>Pelapak belum menginput harga.</div>
+                    )}
+                  </div>
+                )}
 
-                  {/* Sliders */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
-                    {[
-                      { key: "pelapak_to_bank", label: "🏭→🏦 Pelapak → Bank", c: "var(--b)" },
-                      { key: "bank_to_drop_point", label: "🏦→📍 Bank → DP", c: "var(--y)" },
-                      { key: "drop_point_to_user", label: "📍→👤 DP → User", c: "var(--g)" },
-                    ].map(s => (
-                      <div key={s.key}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 10 }}>
-                          <span style={{ color: "var(--t2)" }}>{s.label}</span>
-                          <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: s.c }}>{Math.round(Number(margins[s.key]) * 100)}%</span>
-                        </div>
-                        <input type="range" min={5} max={40}
-                          value={Math.round(Number(margins[s.key]) * 100)}
-                          onChange={e => updateMargin(s.key, parseInt(e.target.value) / 100)}
-                          style={{ accentColor: s.c }} />
+                {myEntity && profile.role === "dp" && (
+                  <div className="c" style={{ padding: 22 }}>
+                    {/* Bank Sampah selector */}
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>Pilih Bank Sampah</label>
+                      <select value={myEntity.bank_sampah_id || ""} onChange={e => updateDpBank(e.target.value)}>
+                        <option value="">-- Pilih Bank Sampah --</option>
+                        {bankSampah.filter(bs => bs.pelapak_id).map(bs => <option key={bs.id} value={bs.id}>{bs.name}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Margin slider */}
+                    <div style={{ marginBottom: 20 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 11 }}>
+                        <span style={{ color: "var(--t2)" }}>Margin Drop Point</span>
+                        <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: "var(--y)" }}>{Math.round(Number(myEntity.margin) * 100)}%</span>
                       </div>
-                    ))}
+                      <input type="range" min={0} max={50}
+                        value={Math.round(Number(myEntity.margin) * 100)}
+                        onChange={e => updateMyMargin(parseInt(e.target.value) / 100)}
+                        style={{ accentColor: "var(--y)" }} />
+                    </div>
+
+                    {/* Price preview */}
+                    {myEntity.bank_sampah_id && effectivePrices.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--w)", marginBottom: 8 }}>Preview Harga ({effectivePrices.length} item)</div>
+                        <div style={{ maxHeight: 200, overflow: "auto" }}>
+                          {effectivePrices.slice(0, 15).map(p => (
+                            <div key={p.item_code} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid var(--bdr)", fontSize: 10 }}>
+                              <span style={{ color: "var(--t)" }}>{p.name}</span>
+                              <span style={{ fontFamily: "var(--m)" }}>
+                                <span style={{ color: "var(--b)" }}>{rp(p.bank_price)}</span>
+                                <span style={{ color: "var(--t2)", margin: "0 4px" }}>→</span>
+                                <span style={{ color: "var(--y)", fontWeight: 600 }}>{rp(p.dp_price)}</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {myEntity.bank_sampah_id && effectivePrices.length === 0 && (
+                      <div style={{ padding: 14, textAlign: "center", color: "var(--t2)", fontSize: 11 }}>Bank Sampah belum terhubung ke Pelapak atau Pelapak belum menginput harga.</div>
+                    )}
                   </div>
-                  <div style={{ marginTop: 14, fontSize: 10, fontFamily: "var(--m)", color: "var(--t2)" }}>
-                    ⚡ Perubahan margin langsung update v_prices secara realtime di seluruh network.
-                  </div>
-                </div>
+                )}
               </div>
             )}
 

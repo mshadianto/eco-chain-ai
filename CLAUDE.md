@@ -33,9 +33,7 @@ npm run deploy     # Build + deploy to Cloudflare Workers
 
 Lightweight client via raw `fetch` (no SDK in live version). Object `sb` provides: `query()`, `insert()`, `update()`, `rpc()`, `signUp()`, `signIn()`, `getUser()`.
 
-**Database tables:** profiles, transactions, transaction_items, margin_config, bank_sampah, drop_points, pickup_schedules, price_history, waste_categories, waste_items
-
-**Database view:** `v_prices` — pre-computes cascading prices per level (pelapak → bank → dp → user)
+**Database tables:** profiles, transactions, transaction_items, margin_config (deprecated), pelapak_prices, bank_sampah, drop_points, pickup_schedules, price_history, waste_categories, waste_items
 
 Schema: `supabase-schema.sql`
 
@@ -44,32 +42,33 @@ Schema: `supabase-schema.sql`
 - **Gemini Vision** (`gemini-2.5-flash`): Waste detection from camera photos. Prompt includes visual identification guide and weight estimation references. Response parsed with JSON auto-repair fallback.
 - **Groq Chat** (`llama-3.3-70b-versatile`): AI assistant with RAG system prompt built from live DB data (prices, drop points, bank sampah, margins). Demo fallback when no API key.
 
-### Cascading Price Model (Core Business Logic)
+### Per-Entity Pricing Model (Core Business Logic)
 
-Four-level supply chain with configurable margins stored in `margin_config` table:
-- **Pelapak** (industry aggregator) → base market price
-- **Bank Sampah** → pelapak price minus ~15%
-- **Drop Point** → bank price minus ~20%
-- **End User** → drop point price minus ~25%
+Three-level supply chain with per-entity margins:
+- **Pelapak** (industry aggregator) → sets base prices per item via input form or CSV upload. Stored in `pelapak_prices` table (unique per pelapak_id + item_code).
+- **Bank Sampah** → selects a Pelapak + sets one margin %. Bank price = pelapak_price × (1 - margin). Columns `pelapak_id` and `margin` on `bank_sampah` table.
+- **Drop Point** → selects a Bank Sampah + sets one margin %. DP price = bank_price × (1 - margin). Columns `bank_sampah_id` and `margin` on `drop_points` table.
 
-Prices are pre-computed by the `v_prices` database view. Margin changes via UI trigger view refresh.
+End users see Drop Point prices (user level removed). Prices are computed on the frontend via `effectivePrices` useMemo. Multiple Pelapaks can coexist with different prices. Entity linking: `bank_sampah.user_id` and `drop_points.user_id` link to the managing user account.
 
 ### Multi-Role System
 
 Auth via Supabase email/password. Role stored in `profiles` table.
-- **user**: Prices, Scan (AI vision), Chat AI, Network, Transactions
-- **dp** (Drop Point): + Create TX, Pickup schedules
-- **bank** (Bank Sampah): + Margin management, Pickup schedules
-- **pelapak**: + Margin management
+- **user**: Prices (select DP to view), Scan (AI vision), Chat AI, Network, Transactions
+- **dp** (Drop Point): + Create TX, Pengaturan (select Bank Sampah + margin), Pickup schedules
+- **bank** (Bank Sampah): + Pengaturan (select Pelapak + margin), Pickup schedules
+- **pelapak**: + Kelola Harga (input/upload prices per item)
 
 ### Data Flow
 
 All data comes from Supabase (no hardcoded constants in live version):
-- `prices` ← `v_prices` view (item_code, name, category, unit, pelapak_price, bank_price, dp_price, user_price)
-- `dropPoints` ← `drop_points` table
-- `bankSampah` ← `bank_sampah` table
+- `pelapakPrices` ← `pelapak_prices` table (pelapak_id, item_code, item_name, category, unit, price_per_kg)
+- `effectivePrices` ← computed via useMemo from pelapakPrices + entity chain (role-dependent)
+- `dropPoints` ← `drop_points` table (includes bank_sampah_id, margin, user_id)
+- `bankSampah` ← `bank_sampah` table (includes pelapak_id, margin, user_id)
+- `pelapakList` ← `profiles` filtered by role='pelapak'
+- `myEntity` ← resolved from bank_sampah/drop_points by user_id for logged-in bank/dp users
 - `categories` ← `waste_categories` table
-- `margins` ← `margin_config` table (single-row)
 - `transactions` + `txItems` ← `transactions` + `transaction_items` tables
 
 ### Styling
