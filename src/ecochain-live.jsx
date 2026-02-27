@@ -257,8 +257,8 @@ function parseCoordinates(text) {
 
 // ─── TRANSLATIONS ───
 const T = {
-  id: { dashboard:"Dashboard", prices:"Harga", scan:"Scan", chat:"Chat AI", map:"Peta", tx:"Transaksi", reports:"Laporan", newtx:"Buat TX", kelola:"Kelola Harga", settings:"Pengaturan", pickup:"Pickup", login:"Masuk", register:"Daftar Baru", logout:"Keluar", name:"Nama", email:"Email", password:"Password", confirm_pw:"Konfirmasi Password", submit:"Kirim", save:"Simpan", cancel:"Batal", delete_btn:"Hapus", refresh:"Refresh", total:"Total", weight:"Berat", value:"Nilai", items:"Item", filter:"Filter", export_csv:"Export CSV", week:"Minggu Ini", month:"Bulan Ini", all_time:"Semua", pending:"Menunggu", pickup_s:"Dijemput", done:"Selesai", cancelled:"Dibatalkan", points:"Poin", leaderboard:"Papan Peringkat", no_data:"Belum ada data.", profile:"Profil", change_pw:"Ganti Password", watch:"Pantau", unwatch:"Batal Pantau", alerts:"Notifikasi Harga", install_app:"Install Aplikasi", not_logged:"Belum login", welcome:"Selamat datang", network:"Network", select_dp:"Pilih Drop Point untuk lihat harga:", create_tx:"Buat Transaksi", scan_title:"Scan Sampah — AI Vision", chat_title:"EcoChain Assistant", new_pw:"Password Baru", save_profile:"Simpan Profil", total_tx:"Total Transaksi", total_weight:"Total Berat", total_value:"Total Nilai", active_items:"Item Aktif", select_bs:"Pilih Bank Sampah", select_pelp:"Pilih Pelapak Sumber", margin:"Margin", env_impact:"Dampak Lingkungan", co2_saved:"CO₂ Dihemat", trees_saved:"Pohon Diselamatkan", water_saved:"Air Dihemat", community:"Komunitas", tips_title:"Tips Daur Ulang", recent_activity:"Aktivitas Terkini", offline_mode:"Mode Offline", cached_data:"Data tersimpan lokal", price_history:"Riwayat Harga", select_item:"Pilih item", days_30:"30 Hari", days_90:"90 Hari", invoice:"Struk", print_invoice:"Cetak Struk", heatmap:"Heatmap Aktivitas", show_heatmap:"Tampilkan Heatmap", enable_notif:"Aktifkan Notifikasi", notif_enabled:"Notifikasi aktif", rate:"Beri Rating", review:"Ulasan", rating:"Rating", avg_rating:"Rating Rata-rata", review_placeholder:"Tulis komentar (opsional)", review_submitted:"Ulasan berhasil dikirim!", referral:"Referral", referral_code:"Kode Referral", referral_copied:"Kode referral disalin!", enter_referral:"Punya kode referral?", request_pickup:"Minta Pickup", pickup_status:"Status Pickup", pickup_requested:"Pickup diminta!", pickup_address:"Alamat Penjemputan", share:"Bagikan", share_achievement:"Bagikan Pencapaian", onboard_next:"Lanjut", onboard_skip:"Lewati", onboard_done:"Selesai!", estimated_weight:"Estimasi Berat", schedule_pickup:"Jadwalkan", start_pickup:"Mulai Pickup", complete_pickup:"Selesai", wallet:"Dompet", balance:"Saldo", top_up:"Isi Saldo", wallet_history:"Riwayat Dompet", credit:"Masuk", debit:"Keluar", marketplace:"Marketplace", products:"Produk Daur Ulang", list_product:"Jual Produk", product_name:"Nama Produk", product_desc:"Deskripsi", product_price:"Harga Produk", product_stock:"Stok", membership:"Membership", free_tier:"Gratis", silver_tier:"Silver", gold_tier:"Gold", upgrade_tier:"Upgrade", dynamic_price:"Harga Dinamis", trending_up:"Tren Naik", trending_down:"Tren Turun", inventory:"Inventaris", stock_level:"Level Stok", low_stock:"Stok Rendah", route:"Rute Optimal", nearest_dp:"DP Terdekat", distance:"Jarak", barcode:"Scan Barcode", multi_photo:"Multi Foto", gallery:"Galeri", confidence:"Keyakinan", predict:"Prediksi", forecast:"Perkiraan", trend:"Tren", recommend:"Rekomendasi", for_you:"Untuk Anda", best_time:"Waktu Terbaik Jual", faq:"FAQ", common_questions:"Pertanyaan Umum", team:"Tim", create_team:"Buat Tim", members:"Anggota", audit_trail:"Jejak Audit", action_log:"Log Aktivitas", dispute:"Sengketa", raise_dispute:"Ajukan Sengketa", dispute_reason:"Alasan Sengketa", dispute_status:"Status Sengketa", resolution:"Resolusi", area_board:"Peringkat Wilayah", select_area:"Pilih Wilayah", all_areas:"Semua Wilayah", projected:"Proyeksi", no_dispute:"Belum ada sengketa", open:"Buka", investigating:"Investigasi", resolved:"Terselesaikan", charts_pro:"Analitik Pro", category_breakdown:"Breakdown Kategori", revenue_trend:"Tren Pendapatan", period_compare:"Perbandingan Periode", carbon_credit:"Kredit Karbon", carbon_cert:"Sertifikat Karbon", download_cert:"Unduh Sertifikat", carbon_offset:"Offset Karbon", price_ticker:"Ticker Harga", this_period:"Periode Ini", prev_period:"Periode Sebelumnya", growth_rate:"Laju Pertumbuhan", messaging:"Pesan", send_msg:"Kirim", msg_placeholder:"Tulis pesan...", no_messages:"Belum ada pesan", challenge:"Tantangan", quests:"Quest Mingguan", quest_progress:"Progres", quest_reward:"Hadiah", quest_completed:"Selesai!", quest_active:"Aktif", announcements:"Pengumuman", post_announcement:"Posting Pengumuman", ann_title:"Judul", ann_content:"Isi Pengumuman", ann_posted:"Pengumuman diposting!", ann_pinned:"Disematkan", no_announcements:"Belum ada pengumuman" },
-  en: { dashboard:"Dashboard", prices:"Prices", scan:"Scan", chat:"AI Chat", map:"Map", tx:"Transactions", reports:"Reports", newtx:"Create TX", kelola:"Manage Prices", settings:"Settings", pickup:"Pickup", login:"Login", register:"Register", logout:"Logout", name:"Name", email:"Email", password:"Password", confirm_pw:"Confirm Password", submit:"Send", save:"Save", cancel:"Cancel", delete_btn:"Delete", refresh:"Refresh", total:"Total", weight:"Weight", value:"Value", items:"Items", filter:"Filter", export_csv:"Export CSV", week:"This Week", month:"This Month", all_time:"All Time", pending:"Pending", pickup_s:"Pickup", done:"Done", cancelled:"Cancelled", points:"Points", leaderboard:"Leaderboard", no_data:"No data yet.", profile:"Profile", change_pw:"Change Password", watch:"Watch", unwatch:"Unwatch", alerts:"Price Alerts", install_app:"Install App", not_logged:"Not logged in", welcome:"Welcome", network:"Network", select_dp:"Select Drop Point to view prices:", create_tx:"Create Transaction", scan_title:"Scan Waste — AI Vision", chat_title:"EcoChain Assistant", new_pw:"New Password", save_profile:"Save Profile", total_tx:"Total Transactions", total_weight:"Total Weight", total_value:"Total Value", active_items:"Active Items", select_bs:"Select Bank Sampah", select_pelp:"Select Pelapak Source", margin:"Margin", env_impact:"Environmental Impact", co2_saved:"CO₂ Saved", trees_saved:"Trees Saved", water_saved:"Water Saved", community:"Community", tips_title:"Recycling Tips", recent_activity:"Recent Activity", offline_mode:"Offline Mode", cached_data:"Locally cached data", price_history:"Price History", select_item:"Select item", days_30:"30 Days", days_90:"90 Days", invoice:"Receipt", print_invoice:"Print Receipt", heatmap:"Activity Heatmap", show_heatmap:"Show Heatmap", enable_notif:"Enable Notifications", notif_enabled:"Notifications enabled", rate:"Rate", review:"Review", rating:"Rating", avg_rating:"Average Rating", review_placeholder:"Write a comment (optional)", review_submitted:"Review submitted!", referral:"Referral", referral_code:"Referral Code", referral_copied:"Referral code copied!", enter_referral:"Have a referral code?", request_pickup:"Request Pickup", pickup_status:"Pickup Status", pickup_requested:"Pickup requested!", pickup_address:"Pickup Address", share:"Share", share_achievement:"Share Achievement", onboard_next:"Next", onboard_skip:"Skip", onboard_done:"Done!", estimated_weight:"Estimated Weight", schedule_pickup:"Schedule", start_pickup:"Start Pickup", complete_pickup:"Complete", wallet:"Wallet", balance:"Balance", top_up:"Top Up", wallet_history:"Wallet History", credit:"Credit", debit:"Debit", marketplace:"Marketplace", products:"Recycled Products", list_product:"Sell Product", product_name:"Product Name", product_desc:"Description", product_price:"Product Price", product_stock:"Stock", membership:"Membership", free_tier:"Free", silver_tier:"Silver", gold_tier:"Gold", upgrade_tier:"Upgrade", dynamic_price:"Dynamic Pricing", trending_up:"Trending Up", trending_down:"Trending Down", inventory:"Inventory", stock_level:"Stock Level", low_stock:"Low Stock", route:"Optimal Route", nearest_dp:"Nearest DP", distance:"Distance", barcode:"Scan Barcode", multi_photo:"Multi Photo", gallery:"Gallery", confidence:"Confidence", predict:"Predict", forecast:"Forecast", trend:"Trend", recommend:"Recommendations", for_you:"For You", best_time:"Best Time to Sell", faq:"FAQ", common_questions:"Common Questions", team:"Team", create_team:"Create Team", members:"Members", audit_trail:"Audit Trail", action_log:"Activity Log", dispute:"Dispute", raise_dispute:"Raise Dispute", dispute_reason:"Dispute Reason", dispute_status:"Dispute Status", resolution:"Resolution", area_board:"Area Leaderboard", select_area:"Select Area", all_areas:"All Areas", projected:"Projected", no_dispute:"No disputes yet", open:"Open", investigating:"Investigating", resolved:"Resolved", charts_pro:"Pro Analytics", category_breakdown:"Category Breakdown", revenue_trend:"Revenue Trend", period_compare:"Period Comparison", carbon_credit:"Carbon Credit", carbon_cert:"Carbon Certificate", download_cert:"Download Certificate", carbon_offset:"Carbon Offset", price_ticker:"Price Ticker", this_period:"This Period", prev_period:"Previous Period", growth_rate:"Growth Rate", messaging:"Messages", send_msg:"Send", msg_placeholder:"Write a message...", no_messages:"No messages yet", challenge:"Challenge", quests:"Weekly Quests", quest_progress:"Progress", quest_reward:"Reward", quest_completed:"Completed!", quest_active:"Active", announcements:"Announcements", post_announcement:"Post Announcement", ann_title:"Title", ann_content:"Announcement Content", ann_posted:"Announcement posted!", ann_pinned:"Pinned", no_announcements:"No announcements yet" },
+  id: { dashboard:"Dashboard", prices:"Harga", scan:"Scan", chat:"Chat AI", map:"Peta", tx:"Transaksi", reports:"Laporan", newtx:"Buat TX", kelola:"Kelola Harga", settings:"Pengaturan", pickup:"Pickup", login:"Masuk", register:"Daftar Baru", logout:"Keluar", name:"Nama", email:"Email", password:"Password", confirm_pw:"Konfirmasi Password", submit:"Kirim", save:"Simpan", cancel:"Batal", delete_btn:"Hapus", refresh:"Refresh", total:"Total", weight:"Berat", value:"Nilai", items:"Item", filter:"Filter", export_csv:"Export CSV", week:"Minggu Ini", month:"Bulan Ini", all_time:"Semua", pending:"Menunggu", pickup_s:"Dijemput", done:"Selesai", cancelled:"Dibatalkan", points:"Poin", leaderboard:"Papan Peringkat", no_data:"Belum ada data.", profile:"Profil", change_pw:"Ganti Password", watch:"Pantau", unwatch:"Batal Pantau", alerts:"Notifikasi Harga", install_app:"Install Aplikasi", not_logged:"Belum login", welcome:"Selamat datang", network:"Network", select_dp:"Pilih Drop Point untuk lihat harga:", create_tx:"Buat Transaksi", scan_title:"Scan Sampah — AI Vision", chat_title:"EcoChain Assistant", new_pw:"Password Baru", save_profile:"Simpan Profil", total_tx:"Total Transaksi", total_weight:"Total Berat", total_value:"Total Nilai", active_items:"Item Aktif", select_bs:"Pilih Bank Sampah", select_pelp:"Pilih Pelapak Sumber", margin:"Margin", env_impact:"Dampak Lingkungan", co2_saved:"CO₂ Dihemat", trees_saved:"Pohon Diselamatkan", water_saved:"Air Dihemat", community:"Komunitas", tips_title:"Tips Daur Ulang", recent_activity:"Aktivitas Terkini", offline_mode:"Mode Offline", cached_data:"Data tersimpan lokal", price_history:"Riwayat Harga", select_item:"Pilih item", days_30:"30 Hari", days_90:"90 Hari", invoice:"Struk", print_invoice:"Cetak Struk", heatmap:"Heatmap Aktivitas", show_heatmap:"Tampilkan Heatmap", enable_notif:"Aktifkan Notifikasi", notif_enabled:"Notifikasi aktif", rate:"Beri Rating", review:"Ulasan", rating:"Rating", avg_rating:"Rating Rata-rata", review_placeholder:"Tulis komentar (opsional)", review_submitted:"Ulasan berhasil dikirim!", referral:"Referral", referral_code:"Kode Referral", referral_copied:"Kode referral disalin!", enter_referral:"Punya kode referral?", request_pickup:"Minta Pickup", pickup_status:"Status Pickup", pickup_requested:"Pickup diminta!", pickup_address:"Alamat Penjemputan", share:"Bagikan", share_achievement:"Bagikan Pencapaian", onboard_next:"Lanjut", onboard_skip:"Lewati", onboard_done:"Selesai!", estimated_weight:"Estimasi Berat", schedule_pickup:"Jadwalkan", start_pickup:"Mulai Pickup", complete_pickup:"Selesai", wallet:"Dompet", balance:"Saldo", top_up:"Isi Saldo", wallet_history:"Riwayat Dompet", credit:"Masuk", debit:"Keluar", marketplace:"Marketplace", products:"Produk Daur Ulang", list_product:"Jual Produk", product_name:"Nama Produk", product_desc:"Deskripsi", product_price:"Harga Produk", product_stock:"Stok", membership:"Membership", free_tier:"Gratis", silver_tier:"Silver", gold_tier:"Gold", upgrade_tier:"Upgrade", dynamic_price:"Harga Dinamis", trending_up:"Tren Naik", trending_down:"Tren Turun", inventory:"Inventaris", stock_level:"Level Stok", low_stock:"Stok Rendah", route:"Rute Optimal", nearest_dp:"DP Terdekat", distance:"Jarak", barcode:"Scan Barcode", multi_photo:"Multi Foto", gallery:"Galeri", confidence:"Keyakinan", predict:"Prediksi", forecast:"Perkiraan", trend:"Tren", recommend:"Rekomendasi", for_you:"Untuk Anda", best_time:"Waktu Terbaik Jual", faq:"FAQ", common_questions:"Pertanyaan Umum", team:"Tim", create_team:"Buat Tim", members:"Anggota", audit_trail:"Jejak Audit", action_log:"Log Aktivitas", dispute:"Sengketa", raise_dispute:"Ajukan Sengketa", dispute_reason:"Alasan Sengketa", dispute_status:"Status Sengketa", resolution:"Resolusi", area_board:"Peringkat Wilayah", select_area:"Pilih Wilayah", all_areas:"Semua Wilayah", projected:"Proyeksi", no_dispute:"Belum ada sengketa", open:"Buka", investigating:"Investigasi", resolved:"Terselesaikan", charts_pro:"Analitik Pro", category_breakdown:"Breakdown Kategori", revenue_trend:"Tren Pendapatan", period_compare:"Perbandingan Periode", carbon_credit:"Kredit Karbon", carbon_cert:"Sertifikat Karbon", download_cert:"Unduh Sertifikat", carbon_offset:"Offset Karbon", price_ticker:"Ticker Harga", this_period:"Periode Ini", prev_period:"Periode Sebelumnya", growth_rate:"Laju Pertumbuhan", messaging:"Pesan", send_msg:"Kirim", msg_placeholder:"Tulis pesan...", no_messages:"Belum ada pesan", challenge:"Tantangan", quests:"Quest Mingguan", quest_progress:"Progres", quest_reward:"Hadiah", quest_completed:"Selesai!", quest_active:"Aktif", announcements:"Pengumuman", post_announcement:"Posting Pengumuman", ann_title:"Judul", ann_content:"Isi Pengumuman", ann_posted:"Pengumuman diposting!", ann_pinned:"Disematkan", no_announcements:"Belum ada pengumuman", calendar:"Kalender", today:"Hari ini", scheduled_events:"Jadwal", no_events:"Tidak ada jadwal", bulk_tx:"Transaksi Massal", add_batch:"Tambah Baris", submit_bulk:"Kirim Semua", batch_user:"Nama User", batch_success:"transaksi massal berhasil dibuat!", weight_verify:"Verifikasi Berat", ai_estimate:"Estimasi AI", actual_weight:"Berat Aktual", accuracy:"Akurasi", verified:"Terverifikasi", unverified:"Belum Diverifikasi", compare_prices:"Bandingkan Harga", best_price:"Harga Terbaik", compare_dp:"Bandingkan antar DP", voice_input:"Input Suara", listening:"Mendengarkan...", voice_unsupported:"Browser tidak mendukung input suara", achievement_cert:"Sertifikat Pencapaian", download_achievement:"Unduh Sertifikat Pencapaian" },
+  en: { dashboard:"Dashboard", prices:"Prices", scan:"Scan", chat:"AI Chat", map:"Map", tx:"Transactions", reports:"Reports", newtx:"Create TX", kelola:"Manage Prices", settings:"Settings", pickup:"Pickup", login:"Login", register:"Register", logout:"Logout", name:"Name", email:"Email", password:"Password", confirm_pw:"Confirm Password", submit:"Send", save:"Save", cancel:"Cancel", delete_btn:"Delete", refresh:"Refresh", total:"Total", weight:"Weight", value:"Value", items:"Items", filter:"Filter", export_csv:"Export CSV", week:"This Week", month:"This Month", all_time:"All Time", pending:"Pending", pickup_s:"Pickup", done:"Done", cancelled:"Cancelled", points:"Points", leaderboard:"Leaderboard", no_data:"No data yet.", profile:"Profile", change_pw:"Change Password", watch:"Watch", unwatch:"Unwatch", alerts:"Price Alerts", install_app:"Install App", not_logged:"Not logged in", welcome:"Welcome", network:"Network", select_dp:"Select Drop Point to view prices:", create_tx:"Create Transaction", scan_title:"Scan Waste — AI Vision", chat_title:"EcoChain Assistant", new_pw:"New Password", save_profile:"Save Profile", total_tx:"Total Transactions", total_weight:"Total Weight", total_value:"Total Value", active_items:"Active Items", select_bs:"Select Bank Sampah", select_pelp:"Select Pelapak Source", margin:"Margin", env_impact:"Environmental Impact", co2_saved:"CO₂ Saved", trees_saved:"Trees Saved", water_saved:"Water Saved", community:"Community", tips_title:"Recycling Tips", recent_activity:"Recent Activity", offline_mode:"Offline Mode", cached_data:"Locally cached data", price_history:"Price History", select_item:"Select item", days_30:"30 Days", days_90:"90 Days", invoice:"Receipt", print_invoice:"Print Receipt", heatmap:"Activity Heatmap", show_heatmap:"Show Heatmap", enable_notif:"Enable Notifications", notif_enabled:"Notifications enabled", rate:"Rate", review:"Review", rating:"Rating", avg_rating:"Average Rating", review_placeholder:"Write a comment (optional)", review_submitted:"Review submitted!", referral:"Referral", referral_code:"Referral Code", referral_copied:"Referral code copied!", enter_referral:"Have a referral code?", request_pickup:"Request Pickup", pickup_status:"Pickup Status", pickup_requested:"Pickup requested!", pickup_address:"Pickup Address", share:"Share", share_achievement:"Share Achievement", onboard_next:"Next", onboard_skip:"Skip", onboard_done:"Done!", estimated_weight:"Estimated Weight", schedule_pickup:"Schedule", start_pickup:"Start Pickup", complete_pickup:"Complete", wallet:"Wallet", balance:"Balance", top_up:"Top Up", wallet_history:"Wallet History", credit:"Credit", debit:"Debit", marketplace:"Marketplace", products:"Recycled Products", list_product:"Sell Product", product_name:"Product Name", product_desc:"Description", product_price:"Product Price", product_stock:"Stock", membership:"Membership", free_tier:"Free", silver_tier:"Silver", gold_tier:"Gold", upgrade_tier:"Upgrade", dynamic_price:"Dynamic Pricing", trending_up:"Trending Up", trending_down:"Trending Down", inventory:"Inventory", stock_level:"Stock Level", low_stock:"Low Stock", route:"Optimal Route", nearest_dp:"Nearest DP", distance:"Distance", barcode:"Scan Barcode", multi_photo:"Multi Photo", gallery:"Gallery", confidence:"Confidence", predict:"Predict", forecast:"Forecast", trend:"Trend", recommend:"Recommendations", for_you:"For You", best_time:"Best Time to Sell", faq:"FAQ", common_questions:"Common Questions", team:"Team", create_team:"Create Team", members:"Members", audit_trail:"Audit Trail", action_log:"Activity Log", dispute:"Dispute", raise_dispute:"Raise Dispute", dispute_reason:"Dispute Reason", dispute_status:"Dispute Status", resolution:"Resolution", area_board:"Area Leaderboard", select_area:"Select Area", all_areas:"All Areas", projected:"Projected", no_dispute:"No disputes yet", open:"Open", investigating:"Investigating", resolved:"Resolved", charts_pro:"Pro Analytics", category_breakdown:"Category Breakdown", revenue_trend:"Revenue Trend", period_compare:"Period Comparison", carbon_credit:"Carbon Credit", carbon_cert:"Carbon Certificate", download_cert:"Download Certificate", carbon_offset:"Carbon Offset", price_ticker:"Price Ticker", this_period:"This Period", prev_period:"Previous Period", growth_rate:"Growth Rate", messaging:"Messages", send_msg:"Send", msg_placeholder:"Write a message...", no_messages:"No messages yet", challenge:"Challenge", quests:"Weekly Quests", quest_progress:"Progress", quest_reward:"Reward", quest_completed:"Completed!", quest_active:"Active", announcements:"Announcements", post_announcement:"Post Announcement", ann_title:"Title", ann_content:"Announcement Content", ann_posted:"Announcement posted!", ann_pinned:"Pinned", no_announcements:"No announcements yet", calendar:"Calendar", today:"Today", scheduled_events:"Schedule", no_events:"No events", bulk_tx:"Bulk Transaction", add_batch:"Add Row", submit_bulk:"Submit All", batch_user:"User Name", batch_success:"bulk transactions created!", weight_verify:"Weight Verification", ai_estimate:"AI Estimate", actual_weight:"Actual Weight", accuracy:"Accuracy", verified:"Verified", unverified:"Unverified", compare_prices:"Compare Prices", best_price:"Best Price", compare_dp:"Compare across DPs", voice_input:"Voice Input", listening:"Listening...", voice_unsupported:"Browser does not support voice input", achievement_cert:"Achievement Certificate", download_achievement:"Download Achievement Certificate" },
 };
 
 // ─── MINI SVG BAR CHART ───
@@ -463,6 +463,14 @@ export default function EcoChain() {
   const [announcements, setAnnouncements] = useState([]);
   const [annForm, setAnnForm] = useState({ title: "", content: "" });
   const [showAnnForm, setShowAnnForm] = useState(false);
+  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; });
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [bulkRows, setBulkRows] = useState([{ userName: "", dp: "", items: [{ code: "", weight: "" }] }]);
+  const [showBulkTx, setShowBulkTx] = useState(false);
+  const [weightVerifications, setWeightVerifications] = useState({});
+  const [showPriceCompare, setShowPriceCompare] = useState(false);
+  const [compareItem, setCompareItem] = useState("");
+  const [isListening, setIsListening] = useState(false);
 
   // New Transaction form
   const [txForm, setTxForm] = useState({ dp: "", items: [{ code: "", weight: "" }] });
@@ -1469,6 +1477,143 @@ export default function EcoChain() {
     } catch (e) { flash(`❌ ${e.message}`, "err"); }
   };
 
+  // ─── SCHEDULING CALENDAR DATA ───
+  const calendarEvents = useMemo(() => {
+    const events = {};
+    for (const tx of transactions) {
+      const d = tx.created_at?.slice(0, 10);
+      if (d) { if (!events[d]) events[d] = []; events[d].push({ type: "tx", status: tx.status, id: tx.id }); }
+    }
+    for (const pk of pickups) {
+      const d = pk.pickup_date?.slice(0, 10);
+      if (d) { if (!events[d]) events[d] = []; events[d].push({ type: "pickup", status: pk.status, id: pk.id }); }
+    }
+    return events;
+  }, [transactions, pickups]);
+
+  // ─── BULK TRANSACTION SUBMIT ───
+  const submitBulkTx = async () => {
+    const valid = bulkRows.filter(r => r.userName.trim() && r.dp && r.items.some(i => i.code && i.weight));
+    if (!valid.length) { flash("❌ " + (lang === "id" ? "Lengkapi minimal 1 baris!" : "Complete at least 1 row!"), "err"); return; }
+    try {
+      let count = 0;
+      for (const row of valid) {
+        const txId = `ECH-${new Date().toISOString().slice(5, 10).replace("-", "")}-B${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+        await sb.insert("transactions", { id: txId, user_id: user.id, user_name: row.userName.trim(), drop_point_id: row.dp, status: "pending" }, token);
+        for (const item of row.items.filter(i => i.code && i.weight)) {
+          const found = effectivePrices.find(p => p.item_code === item.code);
+          if (found) await sb.insert("transaction_items", { transaction_id: txId, waste_code: item.code, waste_name: found.name, weight_kg: parseFloat(item.weight) }, token);
+        }
+        count++;
+      }
+      flash(`✅ ${count} ${t("batch_success")}`);
+      setBulkRows([{ userName: "", dp: "", items: [{ code: "", weight: "" }] }]);
+      setShowBulkTx(false);
+      loadData();
+    } catch (e) { flash(`❌ ${e.message}`, "err"); }
+  };
+
+  // ─── WEIGHT VERIFICATION ───
+  const weightAccuracy = useMemo(() => {
+    const entries = Object.entries(weightVerifications);
+    if (!entries.length) return null;
+    let totalDiff = 0, count = 0;
+    for (const [, v] of entries) {
+      if (v.ai > 0 && v.actual > 0) {
+        totalDiff += Math.abs(v.ai - v.actual) / v.ai;
+        count++;
+      }
+    }
+    return count > 0 ? Math.round((1 - totalDiff / count) * 100) : null;
+  }, [weightVerifications]);
+
+  // ─── PRICE COMPARISON ACROSS DPs ───
+  const priceComparison = useMemo(() => {
+    if (!compareItem) return [];
+    return dropPoints.filter(dp => dp.bank_sampah_id).map(dp => {
+      const bs = bankSampah.find(b => b.id === dp.bank_sampah_id);
+      if (!bs?.pelapak_id) return null;
+      const pp = pelapakPrices.find(p => p.item_code === compareItem && p.pelapak_id === bs.pelapak_id);
+      if (!pp) return null;
+      const bankPrice = pp.price_per_kg * (1 - (Number(bs.margin) || 0));
+      const dpPrice = bankPrice * (1 - (Number(dp.margin) || 0));
+      return { dpId: dp.id, dpName: dp.name, dpPrice, bankName: bs.name, bankPrice, pelapakPrice: pp.price_per_kg };
+    }).filter(Boolean).sort((a, b) => b.dpPrice - a.dpPrice);
+  }, [compareItem, dropPoints, bankSampah, pelapakPrices]);
+
+  // ─── VOICE INPUT ───
+  const startVoiceInput = (target) => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { flash(t("voice_unsupported"), "err"); return; }
+    const recognition = new SR();
+    recognition.lang = lang === "id" ? "id-ID" : "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    setIsListening(true);
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      if (target === "chat") setChatInput(prev => prev + transcript);
+      setIsListening(false);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
+  };
+
+  // ─── ACHIEVEMENT CERTIFICATE GENERATOR ───
+  const downloadAchievementCert = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 700; canvas.height = 500;
+    const ctx = canvas.getContext("2d");
+    // Background
+    ctx.fillStyle = "#0D1117"; ctx.fillRect(0, 0, 700, 500);
+    // Border
+    ctx.strokeStyle = "#22C55E"; ctx.lineWidth = 3; ctx.strokeRect(12, 12, 676, 476);
+    ctx.strokeStyle = "#06B6D4"; ctx.lineWidth = 1; ctx.strokeRect(18, 18, 664, 464);
+    // Title
+    ctx.fillStyle = "#22C55E"; ctx.font = "bold 26px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("🏆 EcoChain AI — Achievement Certificate", 350, 55);
+    // Name
+    ctx.fillStyle = "#F1F5F9"; ctx.font = "bold 22px sans-serif";
+    ctx.fillText(profile?.name || "User", 350, 100);
+    ctx.fillStyle = "#94A3B8"; ctx.font = "14px sans-serif";
+    ctx.fillText(`${roleLabel[profile?.role]} • ${profile?.email || ""}`, 350, 125);
+    // Stats
+    ctx.fillStyle = "#22C55E"; ctx.font = "bold 40px sans-serif";
+    ctx.fillText(`${envImpact.totalWeight} kg`, 350, 185);
+    ctx.fillStyle = "#94A3B8"; ctx.font = "13px sans-serif";
+    ctx.fillText(lang === "id" ? "Total Sampah Didaur Ulang" : "Total Waste Recycled", 350, 210);
+    // Grid stats
+    const stats = [
+      { icon: "🌿", val: `${envImpact.co2} kg CO₂`, lbl: t("co2_saved") },
+      { icon: "🌳", val: `${envImpact.trees}`, lbl: t("trees_saved") },
+      { icon: "💧", val: `${envImpact.water} L`, lbl: t("water_saved") },
+      { icon: "🏆", val: `${myPoints} pts`, lbl: t("points") },
+    ];
+    stats.forEach((s, i) => {
+      const x = 100 + i * 140;
+      ctx.fillStyle = "#F1F5F9"; ctx.font = "bold 18px sans-serif"; ctx.fillText(`${s.icon} ${s.val}`, x + 50, 265);
+      ctx.fillStyle = "#64748B"; ctx.font = "11px sans-serif"; ctx.fillText(s.lbl, x + 50, 283);
+    });
+    // Badges
+    if (myBadges.length > 0) {
+      ctx.fillStyle = "#F59E0B"; ctx.font = "bold 14px sans-serif";
+      ctx.fillText(`${lang === "id" ? "Badge Diraih" : "Badges Earned"}: ${myBadges.map(b => `${b.icon} ${b.label}`).join("  ")}`, 350, 325);
+    }
+    // Carbon credit
+    ctx.fillStyle = "#06B6D4"; ctx.font = "bold 16px sans-serif";
+    ctx.fillText(`${t("carbon_credit")}: ${carbonCredit.co2Tonnes} ton CO₂ ≈ ${rp(carbonCredit.creditValue)}`, 350, 365);
+    // Membership
+    ctx.fillStyle = "#94A3B8"; ctx.font = "13px sans-serif";
+    ctx.fillText(`Membership: ${(profile?.membership_tier || "free").toUpperCase()} • ${t("tx")}: ${transactions.filter(tx => tx.status === "done").length}`, 350, 400);
+    // Footer
+    ctx.fillStyle = "#475569"; ctx.font = "11px sans-serif";
+    ctx.fillText(`${new Date().toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" })}`, 350, 445);
+    ctx.fillText("ecochain-ai-marketplace.sopian-hadianto.workers.dev", 350, 465);
+    // Download
+    const link = document.createElement("a"); link.download = `ecochain-achievement-${Date.now()}.png`; link.href = canvas.toDataURL(); link.click();
+  };
+
   // ─── CHALLENGE/QUEST SYSTEM ───
   const activeQuests = useMemo(() => {
     const now = new Date();
@@ -1707,6 +1852,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
     @keyframes fu{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
     @keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
     .fu{animation:fu .4s ease both}.fu1{animation:fu .4s .05s ease both}.fu2{animation:fu .4s .1s ease both}.fu3{animation:fu .4s .15s ease both}.fu4{animation:fu .4s .2s ease both}
     .c{background:var(--bg3);border:1px solid var(--bdr);border-radius:14px;transition:all .2s}
     .c:hover{border-color:var(--bdr2);box-shadow:0 4px 20px rgba(0,0,0,.25)}
@@ -2116,7 +2262,10 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 <div className="c" style={{ padding: "16px 20px", marginBottom: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)" }}>🏆 {t("points")}: <span style={{ color: "var(--y)", fontFamily: "var(--m)" }}>{myPoints}</span></div>
-                    <button className="bt" onClick={shareAchievement} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(34,197,94,.08)", color: "var(--g)", border: "1px solid rgba(34,197,94,.15)" }}>📤 {t("share")}</button>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="bt" onClick={downloadAchievementCert} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(245,158,11,.08)", color: "var(--y)", border: "1px solid rgba(245,158,11,.15)" }}>🏅 {t("achievement_cert")}</button>
+                      <button className="bt" onClick={shareAchievement} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(34,197,94,.08)", color: "var(--g)", border: "1px solid rgba(34,197,94,.15)" }}>📤 {t("share")}</button>
+                    </div>
                   </div>
                   {myBadges.length > 0 && (
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
@@ -2357,6 +2506,44 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                   {effectivePrices.length} items
                   {myEntity?.margin != null && ` • Margin: ${Math.round(Number(myEntity.margin) * 100)}%`}
                 </div>
+
+                {/* ── Price Comparison across DPs ── */}
+                <div className="c" style={{ padding: "14px 18px", marginTop: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--w)" }}>📊 {t("compare_prices")}</span>
+                    <button className="bt" onClick={() => setShowPriceCompare(!showPriceCompare)}
+                      style={{ padding: "3px 8px", fontSize: 9, background: showPriceCompare ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.03)", color: showPriceCompare ? "var(--g)" : "var(--t2)", border: `1px solid ${showPriceCompare ? "rgba(34,197,94,.25)" : "var(--bdr)"}` }}>
+                      {showPriceCompare ? "▲" : "▼"} {t("compare_dp")}
+                    </button>
+                  </div>
+                  {showPriceCompare && (
+                    <div>
+                      <select value={compareItem} onChange={e => setCompareItem(e.target.value)} style={{ width: "100%", marginBottom: 8, fontSize: 11 }}>
+                        <option value="">{t("select_item")}</option>
+                        {effectivePrices.map(p => <option key={p.item_code} value={p.item_code}>{p.item_code} — {p.name}</option>)}
+                      </select>
+                      {priceComparison.length > 0 && (
+                        <div style={{ display: "grid", gap: 4 }}>
+                          {priceComparison.map((c, i) => (
+                            <div key={c.dpId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", borderRadius: 6, background: i === 0 ? "rgba(34,197,94,.06)" : "var(--bg2)", border: i === 0 ? "1px solid rgba(34,197,94,.15)" : "1px solid var(--bdr)" }}>
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: i === 0 ? "var(--g)" : "var(--w)" }}>
+                                  {i === 0 && "👑 "}{c.dpName}
+                                </div>
+                                <div style={{ fontSize: 8, color: "var(--t2)" }}>via {c.bankName}</div>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                <div style={{ fontSize: 13, fontWeight: 800, fontFamily: "var(--d)", color: i === 0 ? "var(--g)" : "var(--w)" }}>{rp(c.dpPrice)}</div>
+                                {i === 0 && <div style={{ fontSize: 8, color: "var(--g)" }}>{t("best_price")}</div>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {compareItem && priceComparison.length === 0 && <div style={{ fontSize: 10, color: "var(--t2)", textAlign: "center", padding: 8 }}>{t("no_data")}</div>}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -2423,6 +2610,19 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                             <span style={{ fontSize: 8, color: "var(--c)", fontFamily: "var(--m)" }}>{t("confidence")}: {r.confidence || Math.floor(75 + Math.random() * 20)}%</span>
                             {priceTrends[r.code]?.dir === "up" && <Badge color="var(--g)">↑ {t("trending_up")}</Badge>}
                           </div>
+                          {/* Weight verification */}
+                          <div style={{ display: "flex", gap: 6, marginTop: 4, alignItems: "center" }}>
+                            <span style={{ fontSize: 8, color: "var(--t2)" }}>{t("ai_estimate")}: {r.weight}kg →</span>
+                            <input type="number" step="0.1" min="0" placeholder={t("actual_weight")}
+                              value={weightVerifications[`${i}-${r.code}`]?.actual || ""}
+                              onChange={e => setWeightVerifications(v => ({ ...v, [`${i}-${r.code}`]: { ai: r.weight, actual: parseFloat(e.target.value) || 0 } }))}
+                              style={{ width: 70, padding: "2px 6px", fontSize: 9, borderRadius: 4, background: "var(--bg2)", border: "1px solid var(--bdr)", color: "var(--w)" }} />
+                            {weightVerifications[`${i}-${r.code}`]?.actual > 0 && (() => {
+                              const v = weightVerifications[`${i}-${r.code}`];
+                              const acc = Math.round((1 - Math.abs(v.ai - v.actual) / v.ai) * 100);
+                              return <Badge color={acc >= 80 ? "var(--g)" : acc >= 50 ? "var(--y)" : "var(--r)"}>{acc}% {t("accuracy")}</Badge>;
+                            })()}
+                          </div>
                         </div>
                       );
                     })}
@@ -2437,6 +2637,11 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                         </div>
                         <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 2 }}>
                           Total berat: {scanResults.results.reduce((s, r) => s + r.weight, 0).toFixed(1)} kg
+                          {weightAccuracy !== null && (
+                            <span style={{ marginLeft: 8, fontWeight: 700, color: weightAccuracy >= 80 ? "var(--g)" : weightAccuracy >= 50 ? "var(--y)" : "var(--r)" }}>
+                              • {t("accuracy")} AI: {weightAccuracy}%
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -2523,9 +2728,13 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                   <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendChat()}
-                    placeholder="Tanya tentang sampah, harga, lokasi..."
+                    placeholder={isListening ? t("listening") : "Tanya tentang sampah, harga, lokasi..."}
                     disabled={chatLoading}
-                    style={{ flex: 1, opacity: chatLoading ? .5 : 1 }} />
+                    style={{ flex: 1, opacity: chatLoading ? .5 : 1, borderColor: isListening ? "var(--r)" : undefined }} />
+                  <button className="bt" onClick={() => startVoiceInput("chat")}
+                    style={{ padding: "10px 12px", background: isListening ? "rgba(239,68,68,.15)" : "rgba(255,255,255,.04)", color: isListening ? "var(--r)" : "var(--t2)", fontSize: 14, border: `1px solid ${isListening ? "rgba(239,68,68,.3)" : "var(--bdr)"}`, animation: isListening ? "pulse 1s infinite" : "none" }}>
+                    {isListening ? "⏹" : "🎤"}
+                  </button>
                   <button className="bt" onClick={() => sendChat()} disabled={chatLoading || !chatInput.trim()}
                     style={{ padding: "10px 18px", background: chatInput.trim() && !chatLoading ? "linear-gradient(135deg,#22C55E,#16A34A)" : "rgba(255,255,255,.04)", color: chatInput.trim() && !chatLoading ? "#fff" : "var(--t2)", fontWeight: 700, fontSize: 13, border: "none" }}>
                     Kirim
@@ -2807,6 +3016,58 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                     ✅ {t("create_tx")}
                   </button>
                 </div>
+
+                {/* ── Bulk Transaction (DP/Bank only) ── */}
+                {["dp", "bank"].includes(profile.role) && (
+                  <div style={{ marginTop: 16 }}>
+                    <button className="bt" onClick={() => setShowBulkTx(!showBulkTx)}
+                      style={{ width: "100%", padding: "10px 16px", fontSize: 12, fontWeight: 600, background: showBulkTx ? "rgba(139,92,246,.1)" : "rgba(255,255,255,.03)", color: showBulkTx ? "var(--p)" : "var(--t2)", border: `1px solid ${showBulkTx ? "rgba(139,92,246,.25)" : "var(--bdr)"}` }}>
+                      📦 {t("bulk_tx")} {showBulkTx ? "▲" : "▼"}
+                    </button>
+                    {showBulkTx && (
+                      <div className="c" style={{ padding: 18, marginTop: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--w)", marginBottom: 10 }}>📦 {t("bulk_tx")} — {lang === "id" ? "Proses banyak user sekaligus" : "Process multiple users at once"}</div>
+                        {bulkRows.map((row, ri) => (
+                          <div key={ri} style={{ padding: 10, marginBottom: 8, background: "var(--bg2)", borderRadius: 8, border: "1px solid var(--bdr)" }}>
+                            <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                              <input placeholder={t("batch_user")} value={row.userName} onChange={e => { const rows = [...bulkRows]; rows[ri].userName = e.target.value; setBulkRows(rows); }} style={{ flex: 1 }} />
+                              <select value={row.dp} onChange={e => { const rows = [...bulkRows]; rows[ri].dp = e.target.value; setBulkRows(rows); }} style={{ flex: 1 }}>
+                                <option value="">Drop Point</option>
+                                {dropPoints.map(dp => <option key={dp.id} value={dp.id}>{dp.name}</option>)}
+                              </select>
+                              {bulkRows.length > 1 && (
+                                <button className="bt" onClick={() => setBulkRows(r => r.filter((_, i) => i !== ri))}
+                                  style={{ padding: "6px 10px", background: "rgba(239,68,68,.08)", color: "var(--r)", fontSize: 10, border: "1px solid rgba(239,68,68,.15)" }}>✕</button>
+                              )}
+                            </div>
+                            {row.items.map((item, ii) => (
+                              <div key={ii} style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                                <select value={item.code} onChange={e => { const rows = [...bulkRows]; rows[ri].items[ii].code = e.target.value; setBulkRows(rows); }} style={{ flex: 2, fontSize: 10 }}>
+                                  <option value="">{t("select_item")}</option>
+                                  {txFormPrices.map(p => <option key={p.item_code} value={p.item_code}>{p.item_code} — {p.name}</option>)}
+                                </select>
+                                <input type="number" step="0.1" placeholder="kg" value={item.weight}
+                                  onChange={e => { const rows = [...bulkRows]; rows[ri].items[ii].weight = e.target.value; setBulkRows(rows); }} style={{ flex: 1, fontSize: 10 }} />
+                                {row.items.length > 1 && (
+                                  <button className="bt" onClick={() => { const rows = [...bulkRows]; rows[ri].items = rows[ri].items.filter((_, i) => i !== ii); setBulkRows(rows); }}
+                                    style={{ padding: "4px 6px", fontSize: 9, background: "rgba(239,68,68,.06)", color: "var(--r)", border: "1px solid rgba(239,68,68,.1)" }}>✕</button>
+                                )}
+                              </div>
+                            ))}
+                            <button className="bt" onClick={() => { const rows = [...bulkRows]; rows[ri].items.push({ code: "", weight: "" }); setBulkRows(rows); }}
+                              style={{ padding: "3px 8px", fontSize: 9, background: "rgba(255,255,255,.03)", color: "var(--t2)", border: "1px solid var(--bdr)" }}>+ Item</button>
+                          </div>
+                        ))}
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button className="bt" onClick={() => setBulkRows(r => [...r, { userName: "", dp: "", items: [{ code: "", weight: "" }] }])}
+                            style={{ flex: 1, padding: 10, fontSize: 11, background: "rgba(255,255,255,.03)", color: "var(--t2)", border: "1px solid var(--bdr)" }}>+ {t("add_batch")}</button>
+                          <button className="bt" onClick={submitBulkTx}
+                            style={{ flex: 1, padding: 10, fontSize: 11, fontWeight: 700, background: "linear-gradient(135deg,#8B5CF6,#7C3AED)", color: "#fff", border: "none" }}>📦 {t("submit_bulk")} ({bulkRows.filter(r => r.userName && r.dp).length})</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -3019,6 +3280,61 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                       {pickupTab === "request" ? `📋 ${lang === "id" ? "Lihat Daftar" : "View List"}` : `➕ ${t("request_pickup")}`}
                     </button>
                   )}
+                </div>
+
+                {/* ── Scheduling Calendar ── */}
+                <div className="c" style={{ padding: "14px 18px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--w)" }}>📅 {t("calendar")}</span>
+                    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                      <button className="bt" onClick={() => { const [y, m] = calMonth.split("-").map(Number); const d = new Date(y, m - 2, 1); setCalMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`); }}
+                        style={{ padding: "2px 8px", fontSize: 10, background: "rgba(255,255,255,.04)", color: "var(--t2)", border: "1px solid var(--bdr)" }}>◀</button>
+                      <span style={{ fontSize: 10, fontFamily: "var(--m)", color: "var(--w)", minWidth: 70, textAlign: "center" }}>{calMonth}</span>
+                      <button className="bt" onClick={() => { const [y, m] = calMonth.split("-").map(Number); const d = new Date(y, m, 1); setCalMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`); }}
+                        style={{ padding: "2px 8px", fontSize: 10, background: "rgba(255,255,255,.04)", color: "var(--t2)", border: "1px solid var(--bdr)" }}>▶</button>
+                    </div>
+                  </div>
+                  {(() => {
+                    const [year, month] = calMonth.split("-").map(Number);
+                    const firstDay = new Date(year, month - 1, 1).getDay();
+                    const daysInMonth = new Date(year, month, 0).getDate();
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    const dayLabels = lang === "id" ? ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                    return (
+                      <div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+                          {dayLabels.map(d => <div key={d} style={{ textAlign: "center", fontSize: 8, color: "var(--t2)", fontFamily: "var(--m)", padding: 2 }}>{d}</div>)}
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                          {Array(firstDay).fill(null).map((_, i) => <div key={`e${i}`} />)}
+                          {Array.from({ length: daysInMonth }, (_, i) => {
+                            const day = i + 1;
+                            const dateStr = `${calMonth}-${String(day).padStart(2, "0")}`;
+                            const ev = calendarEvents[dateStr] || [];
+                            const isToday = dateStr === todayStr;
+                            const hasTx = ev.some(e => e.type === "tx");
+                            const hasPk = ev.some(e => e.type === "pickup");
+                            return (
+                              <div key={day} style={{ textAlign: "center", padding: "4px 0", borderRadius: 6, fontSize: 10, fontFamily: "var(--m)", fontWeight: isToday ? 800 : 400, color: isToday ? "var(--g)" : ev.length ? "var(--w)" : "var(--t2)", background: isToday ? "rgba(34,197,94,.1)" : ev.length ? "rgba(255,255,255,.03)" : "transparent", border: isToday ? "1px solid rgba(34,197,94,.3)" : "1px solid transparent", cursor: ev.length ? "pointer" : "default", position: "relative" }}
+                                title={ev.length ? `${ev.length} event(s)` : ""}>
+                                {day}
+                                {(hasTx || hasPk) && (
+                                  <div style={{ display: "flex", gap: 2, justifyContent: "center", marginTop: 1 }}>
+                                    {hasTx && <span style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--g)", display: "inline-block" }} />}
+                                    {hasPk && <span style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--c)", display: "inline-block" }} />}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div style={{ display: "flex", gap: 10, marginTop: 6, justifyContent: "center" }}>
+                          <span style={{ fontSize: 8, color: "var(--t2)", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--g)", display: "inline-block" }} /> {t("tx")}</span>
+                          <span style={{ fontSize: 8, color: "var(--t2)", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--c)", display: "inline-block" }} /> {t("pickup")}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* User request pickup form */}
