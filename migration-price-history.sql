@@ -1,5 +1,8 @@
 -- Migration: Price History table
-CREATE TABLE IF NOT EXISTS public.price_history (
+-- Drop if exists from failed previous attempt
+DROP TABLE IF EXISTS public.price_history CASCADE;
+
+CREATE TABLE public.price_history (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   item_code TEXT NOT NULL,
   item_name TEXT NOT NULL,
@@ -18,7 +21,5 @@ CREATE POLICY "price_history_insert" ON public.price_history
   FOR INSERT TO authenticated
   WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'pelapak'));
 
-CREATE INDEX IF NOT EXISTS idx_price_history_item ON public.price_history(item_code);
-CREATE INDEX IF NOT EXISTS idx_price_history_date ON public.price_history(recorded_at DESC);
-
-ALTER PUBLICATION supabase_realtime ADD TABLE public.price_history;
+CREATE INDEX idx_price_history_item ON public.price_history(item_code);
+CREATE INDEX idx_price_history_date ON public.price_history(recorded_at DESC);
