@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ═══════════════════════════════════════════════════════════════
 // ECOCHAIN AI MARKETPLACE — SUPABASE CONNECTED
@@ -255,6 +255,36 @@ function parseCoordinates(text) {
   return null;
 }
 
+// ─── TRANSLATIONS ───
+const T = {
+  id: { dashboard:"Dashboard", prices:"Harga", scan:"Scan", chat:"Chat AI", map:"Peta", tx:"Transaksi", reports:"Laporan", newtx:"Buat TX", kelola:"Kelola Harga", settings:"Pengaturan", pickup:"Pickup", login:"Masuk", register:"Daftar Baru", logout:"Keluar", name:"Nama", email:"Email", password:"Password", confirm_pw:"Konfirmasi Password", submit:"Kirim", save:"Simpan", cancel:"Batal", delete_btn:"Hapus", refresh:"Refresh", total:"Total", weight:"Berat", value:"Nilai", items:"Item", filter:"Filter", export_csv:"Export CSV", week:"Minggu Ini", month:"Bulan Ini", all_time:"Semua", pending:"Menunggu", pickup_s:"Dijemput", done:"Selesai", cancelled:"Dibatalkan", points:"Poin", leaderboard:"Papan Peringkat", no_data:"Belum ada data.", profile:"Profil", change_pw:"Ganti Password", watch:"Pantau", unwatch:"Batal Pantau", alerts:"Notifikasi Harga", install_app:"Install Aplikasi", not_logged:"Belum login", welcome:"Selamat datang", network:"Network", select_dp:"Pilih Drop Point untuk lihat harga:", create_tx:"Buat Transaksi", scan_title:"Scan Sampah — AI Vision", chat_title:"EcoChain Assistant", new_pw:"Password Baru", save_profile:"Simpan Profil", total_tx:"Total Transaksi", total_weight:"Total Berat", total_value:"Total Nilai", active_items:"Item Aktif", select_bs:"Pilih Bank Sampah", select_pelp:"Pilih Pelapak Sumber", margin:"Margin" },
+  en: { dashboard:"Dashboard", prices:"Prices", scan:"Scan", chat:"AI Chat", map:"Map", tx:"Transactions", reports:"Reports", newtx:"Create TX", kelola:"Manage Prices", settings:"Settings", pickup:"Pickup", login:"Login", register:"Register", logout:"Logout", name:"Name", email:"Email", password:"Password", confirm_pw:"Confirm Password", submit:"Send", save:"Save", cancel:"Cancel", delete_btn:"Delete", refresh:"Refresh", total:"Total", weight:"Weight", value:"Value", items:"Items", filter:"Filter", export_csv:"Export CSV", week:"This Week", month:"This Month", all_time:"All Time", pending:"Pending", pickup_s:"Pickup", done:"Done", cancelled:"Cancelled", points:"Points", leaderboard:"Leaderboard", no_data:"No data yet.", profile:"Profile", change_pw:"Change Password", watch:"Watch", unwatch:"Unwatch", alerts:"Price Alerts", install_app:"Install App", not_logged:"Not logged in", welcome:"Welcome", network:"Network", select_dp:"Select Drop Point to view prices:", create_tx:"Create Transaction", scan_title:"Scan Waste — AI Vision", chat_title:"EcoChain Assistant", new_pw:"New Password", save_profile:"Save Profile", total_tx:"Total Transactions", total_weight:"Total Weight", total_value:"Total Value", active_items:"Active Items", select_bs:"Select Bank Sampah", select_pelp:"Select Pelapak Source", margin:"Margin" },
+};
+
+// ─── MINI SVG BAR CHART ───
+function MiniChart({ data, color, height = 48, barWidth = 8 }) {
+  const max = Math.max(...data, 1);
+  const w = data.length * (barWidth + 3);
+  return (
+    <svg width={w} height={height} style={{ display: "block" }}>
+      {data.map((v, i) => (
+        <rect key={i} x={i * (barWidth + 3)} y={height - (v / max) * height}
+          width={barWidth} height={Math.max((v / max) * height, 1)}
+          rx={2} fill={color} opacity={i === data.length - 1 ? 1 : 0.5} />
+      ))}
+    </svg>
+  );
+}
+
+// ─── CSV DOWNLOAD HELPER ───
+function downloadCSV(rows, filename) {
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
@@ -286,6 +316,22 @@ export default function EcoChain() {
   const [notif, setNotif] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dpDetail, setDpDetail] = useState(null);
+  const [theme, setTheme] = useState(() => localStorage.getItem("eco_theme") || "dark");
+  const [lang, setLang] = useState(() => localStorage.getItem("eco_lang") || "id");
+  const t = useCallback((key) => T[lang]?.[key] || T.id[key] || key, [lang]);
+  const [showProfile, setShowProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: "", newPassword: "" });
+  const [expandedTx, setExpandedTx] = useState(null);
+  const [txStatusFilter, setTxStatusFilter] = useState("all");
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [watchedItems, setWatchedItems] = useState(() => { try { return JSON.parse(localStorage.getItem("eco_watch") || "[]"); } catch { return []; } });
+  const [priceAlerts, setPriceAlerts] = useState([]);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [dashPeriod, setDashPeriod] = useState("all");
+  const [reportRange, setReportRange] = useState({ from: "", to: "" });
+  const [txPhoto, setTxPhoto] = useState(null);
+  const txPhotoRef = useRef(null);
+  const [installPrompt, setInstallPrompt] = useState(null);
 
   // New Transaction form
   const [txForm, setTxForm] = useState({ dp: "", items: [{ code: "", weight: "" }] });
@@ -306,11 +352,56 @@ export default function EcoChain() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
 
   const flash = useCallback((msg, type = "ok") => {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 3500);
   }, []);
+
+  // ─── THEME EFFECT ───
+  useEffect(() => {
+    document.body.style.background = theme === "light" ? "#F8FAFC" : "#080C14";
+    localStorage.setItem("eco_theme", theme);
+  }, [theme]);
+
+  // ─── PWA INSTALL PROMPT ───
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  // ─── PRICE ALERT CHECK ───
+  useEffect(() => {
+    if (!effectivePrices.length || !watchedItems.length) return;
+    const prev = JSON.parse(localStorage.getItem("eco_prev_prices") || "{}");
+    const alerts = [];
+    for (const code of watchedItems) {
+      const curr = effectivePrices.find(p => p.item_code === code);
+      const prevPrice = prev[code];
+      if (curr && prevPrice != null) {
+        const currPrice = curr.dp_price || curr.pelapak_price || 0;
+        if (currPrice !== prevPrice) {
+          alerts.push({ code, name: curr.name, prev: prevPrice, curr: currPrice, up: currPrice > prevPrice });
+        }
+      }
+    }
+    setPriceAlerts(alerts);
+    // Save current prices snapshot
+    const snapshot = {};
+    for (const p of effectivePrices) snapshot[p.item_code] = p.dp_price || p.pelapak_price || 0;
+    localStorage.setItem("eco_prev_prices", JSON.stringify(snapshot));
+  }, [effectivePrices, watchedItems]);
+
+  const toggleWatch = (code) => {
+    setWatchedItems(prev => {
+      const next = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code];
+      localStorage.setItem("eco_watch", JSON.stringify(next));
+      return next;
+    });
+  };
 
   // ─── RESTORE SESSION ───
   useEffect(() => {
@@ -373,6 +464,8 @@ export default function EcoChain() {
         setTransactions(tx || []);
         setTxItems(ti || []);
         setPickups(pk || []);
+        // Load leaderboard
+        sb.query("profiles", "select=id,name,role,points&order=points.desc&limit=10", tk).then(lb => setLeaderboard(lb || [])).catch(() => {});
       }
     } catch (e) {
       console.error("Load error:", e);
@@ -477,6 +570,27 @@ export default function EcoChain() {
     setMyEntity(null); setSelectedDpForPrices(null);
     localStorage.removeItem("eco_session");
     flash("👋 Berhasil keluar.");
+  };
+
+  // ─── PROFILE HANDLERS ───
+  const openProfile = () => { setProfileForm({ name: profile?.name || "", newPassword: "" }); setShowProfile(true); };
+  const saveProfile = async () => {
+    try {
+      if (profileForm.name && profileForm.name !== profile.name) {
+        await sb.update("profiles", { id: profile.id }, { name: profileForm.name }, token);
+        const updated = { ...profile, name: profileForm.name };
+        setProfile(updated);
+        localStorage.setItem("eco_session", JSON.stringify({ token, user, profile: updated }));
+      }
+      if (profileForm.newPassword && profileForm.newPassword.length >= 6) {
+        await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+          body: JSON.stringify({ password: profileForm.newPassword }),
+        });
+      }
+      setShowProfile(false);
+      flash(`✅ ${t("profile")} updated!`);
+    } catch (e) { flash(`❌ ${e.message}`, "err"); }
   };
 
   // ─── CREATE TRANSACTION ───
@@ -719,6 +833,66 @@ export default function EcoChain() {
     catFilter ? effectivePrices.filter(p => p.category === catFilter) : effectivePrices
     , [effectivePrices, catFilter]);
 
+  const filteredTx = useMemo(() =>
+    txStatusFilter === "all" ? transactions : transactions.filter(tx => tx.status === txStatusFilter)
+    , [transactions, txStatusFilter]);
+
+  // ─── GAMIFICATION COMPUTED ───
+  const myPoints = useMemo(() => {
+    const doneTx = transactions.filter(tx => tx.status === "done");
+    return doneTx.reduce((sum, tx) => {
+      const items = txItems.filter(i => i.transaction_id === tx.id);
+      return sum + items.reduce((s, it) => s + Math.round(Number(it.weight_kg) * 10), 0);
+    }, 0);
+  }, [transactions, txItems]);
+
+  const myBadges = useMemo(() => {
+    const badges = [];
+    const doneTx = transactions.filter(tx => tx.status === "done");
+    const totalWeight = doneTx.reduce((s, tx) => s + txItems.filter(i => i.transaction_id === tx.id).reduce((s2, it) => s2 + Number(it.weight_kg), 0), 0);
+    if (doneTx.length >= 1) badges.push({ icon: "🌱", label: lang === "id" ? "Transaksi Pertama" : "First Transaction" });
+    if (doneTx.length >= 10) badges.push({ icon: "⭐", label: lang === "id" ? "10 Transaksi" : "10 Transactions" });
+    if (doneTx.length >= 50) badges.push({ icon: "💎", label: lang === "id" ? "50 Transaksi" : "50 Transactions" });
+    if (totalWeight >= 10) badges.push({ icon: "🏋️", label: "10kg Club" });
+    if (totalWeight >= 100) badges.push({ icon: "🏆", label: "100kg Club" });
+    if (totalWeight >= 500) badges.push({ icon: "👑", label: "500kg Legend" });
+    return badges;
+  }, [transactions, txItems, lang]);
+
+  // ─── DASHBOARD STATS ───
+  const computeStats = useMemo(() => {
+    const now = new Date();
+    const weekAgo = new Date(now - 7 * 864e5);
+    const monthAgo = new Date(now - 30 * 864e5);
+    const filterByPeriod = (list) => {
+      if (dashPeriod === "week") return list.filter(tx => new Date(tx.created_at) >= weekAgo);
+      if (dashPeriod === "month") return list.filter(tx => new Date(tx.created_at) >= monthAgo);
+      return list;
+    };
+    const myTx = filterByPeriod(transactions);
+    const doneTx = myTx.filter(tx => tx.status === "done");
+    const totalWeight = doneTx.reduce((s, tx) => {
+      const items = txItems.filter(i => i.transaction_id === tx.id);
+      return s + items.reduce((s2, it) => s2 + Number(it.weight_kg), 0);
+    }, 0);
+    const totalValue = doneTx.reduce((s, tx) => s + getTxTotal(tx.id), 0);
+    return { totalTx: myTx.length, doneTx: doneTx.length, pendingTx: myTx.filter(tx => tx.status === "pending").length, totalWeight, totalValue };
+  }, [transactions, txItems, dashPeriod, effectivePrices]);
+
+  const weeklyData = useMemo(() => {
+    const days = Array(7).fill(0);
+    const now = new Date();
+    for (const tx of transactions.filter(t2 => t2.status === "done")) {
+      const d = new Date(tx.created_at);
+      const diff = Math.floor((now - d) / 864e5);
+      if (diff >= 0 && diff < 7) {
+        const items = txItems.filter(i => i.transaction_id === tx.id);
+        days[6 - diff] += items.reduce((s, it) => s + Number(it.weight_kg), 0);
+      }
+    }
+    return days;
+  }, [transactions, txItems]);
+
   const getTxTotal = (txId) => {
     const items = txItems.filter(i => i.transaction_id === txId);
     return items.reduce((sum, it) => {
@@ -853,9 +1027,12 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
   const roleColor = { user: "#22C55E", dp: "#F59E0B", bank: "#3B82F6", pelapak: "#A855F7" };
 
   // ─── CSS ───
+  const themeVars = theme === "light"
+    ? `:root{--bg:#F8FAFC;--bg2:#F1F5F9;--bg3:#FFFFFF;--bdr:rgba(0,0,0,0.08);--bdr2:rgba(0,0,0,0.12);--t:#334155;--t2:#94A3B8;--w:#0F172A;--g:#16A34A;--y:#D97706;--b:#2563EB;--p:#9333EA;--r:#DC2626;--c:#0891B2;--f:'Sora',sans-serif;--m:'JetBrains Mono',monospace;--d:'Fraunces',serif}`
+    : `:root{--bg:#080C14;--bg2:#0D1420;--bg3:#131B2B;--bdr:rgba(255,255,255,0.06);--bdr2:rgba(255,255,255,0.1);--t:#CBD5E1;--t2:#64748B;--w:#F1F5F9;--g:#22C55E;--y:#F59E0B;--b:#3B82F6;--p:#A855F7;--r:#EF4444;--c:#06B6D4;--f:'Sora',sans-serif;--m:'JetBrains Mono',monospace;--d:'Fraunces',serif}`;
   const CSS = `
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,800&display=swap');
-    :root{--bg:#080C14;--bg2:#0D1420;--bg3:#131B2B;--bdr:rgba(255,255,255,0.06);--bdr2:rgba(255,255,255,0.1);--t:#CBD5E1;--t2:#64748B;--w:#F1F5F9;--g:#22C55E;--y:#F59E0B;--b:#3B82F6;--p:#A855F7;--r:#EF4444;--c:#06B6D4;--f:'Sora',sans-serif;--m:'JetBrains Mono',monospace;--d:'Fraunces',serif}
+    ${themeVars}
     *{box-sizing:border-box;margin:0;padding:0}
     @keyframes fu{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
     @keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
@@ -870,7 +1047,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
     input,select{font-family:var(--f);background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:10px;padding:10px 14px;color:var(--w);font-size:13px;outline:none;width:100%;transition:border .2s}
     input:focus,select:focus{border-color:var(--g)}
     select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
-    select option{background:#1a2332;color:#fff}
+    select option{background:${theme === "light" ? "#fff" : "#1a2332"};color:${theme === "light" ? "#0F172A" : "#fff"}}
     input[type=range]{accent-color:var(--b);height:4px;padding:0}
     ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:3px}
   `;
@@ -893,7 +1070,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
       )}
 
       {/* HEADER */}
-      <header style={{ padding: "10px 20px", background: "rgba(8,12,20,.85)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--bdr)", position: "sticky", top: 0, zIndex: 100 }}>
+      <header style={{ padding: "10px 20px", background: theme === "light" ? "rgba(248,250,252,.9)" : "rgba(8,12,20,.85)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--bdr)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,#22C55E,#06B6D4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, fontFamily: "var(--d)", color: "#000" }}>♻</div>
@@ -902,15 +1079,26 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
               <div style={{ fontSize: 7, fontFamily: "var(--m)", color: "var(--t2)", letterSpacing: 1.5 }}>MARKETPLACE EKONOMI SIRKULAR SAMPAH</div>
             </div>
           </div>
-          {profile ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button className="bt" onClick={() => setTheme(th => th === "dark" ? "light" : "dark")}
+              style={{ padding: "6px 10px", background: "rgba(255,255,255,.04)", color: "var(--t2)", fontSize: 13, border: "1px solid var(--bdr)" }}>
+              {theme === "dark" ? "\u2600\uFE0F" : "\uD83C\uDF19"}
+            </button>
+            <button className="bt" onClick={() => { const n = lang === "id" ? "en" : "id"; setLang(n); localStorage.setItem("eco_lang", n); }}
+              style={{ padding: "6px 10px", background: "rgba(255,255,255,.04)", color: "var(--t2)", fontSize: 11, fontWeight: 700, fontFamily: "var(--m)", border: "1px solid var(--bdr)" }}>
+              {lang === "id" ? "EN" : "ID"}
+            </button>
+            {profile ? (<>
+              <button className="bt" onClick={() => setShowAlerts(!showAlerts)} style={{ padding: "6px 10px", background: "rgba(255,255,255,.04)", color: priceAlerts.length ? "var(--y)" : "var(--t2)", fontSize: 13, border: "1px solid var(--bdr)", position: "relative" }}>
+                🔔{priceAlerts.length > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", background: "var(--r)", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{priceAlerts.length}</span>}
+              </button>
               <Badge color={roleColor[profile.role]}>{roleIcon[profile.role]} {roleLabel[profile.role]}</Badge>
-              <span style={{ fontSize: 12, color: "var(--w)", fontWeight: 600 }}>{profile.name}</span>
-              <button className="bt" onClick={logout} style={{ padding: "6px 14px", background: "rgba(239,68,68,.12)", color: "var(--r)", fontSize: 11, fontWeight: 600, border: "1px solid rgba(239,68,68,.2)" }}>Keluar</button>
-            </div>
-          ) : (
-            <div style={{ fontSize: 11, color: "var(--t2)" }}>Belum login</div>
-          )}
+              <span onClick={openProfile} style={{ fontSize: 12, color: "var(--w)", fontWeight: 600, cursor: "pointer" }}>{profile.name}</span>
+              <button className="bt" onClick={logout} style={{ padding: "6px 14px", background: "rgba(239,68,68,.12)", color: "var(--r)", fontSize: 11, fontWeight: 600, border: "1px solid rgba(239,68,68,.2)" }}>{t("logout")}</button>
+            </>) : (
+              <div style={{ fontSize: 11, color: "var(--t2)" }}>{t("not_logged")}</div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -1044,23 +1232,99 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             {/* Tabs */}
             <div style={{ display: "flex", gap: 4, marginBottom: 16, overflowX: "auto" }}>
               {[
-                { id: "prices", label: "💰 Harga", show: true },
-                { id: "scan", label: "📷 Scan", show: profile.role === "user" },
-                { id: "chat", label: "🤖 Chat AI", show: true },
-                { id: "network", label: "📍 Network", show: true },
-                { id: "tx", label: "📋 Transaksi", show: !!token },
-                { id: "newtx", label: "➕ Buat TX", show: ["dp", "bank"].includes(profile.role) },
-                { id: "kelola", label: "📦 Kelola Harga", show: profile.role === "pelapak" },
-                { id: "settings", label: "⚙️ Pengaturan", show: ["bank", "dp"].includes(profile.role) },
-                { id: "pickup", label: "🚛 Pickup", show: ["dp", "bank"].includes(profile.role) },
-              ].filter(t => t.show).map(t => (
-                <button key={t.id} className="bt" onClick={() => setTab(t.id)} style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, background: tab === t.id ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.02)", color: tab === t.id ? "var(--g)" : "var(--t2)", border: `1px solid ${tab === t.id ? "rgba(34,197,94,.25)" : "var(--bdr)"}`, whiteSpace: "nowrap" }}>
-                  {t.label}
+                { id: "dashboard", label: `📊 ${t("dashboard")}`, show: !!token },
+                { id: "prices", label: `💰 ${t("prices")}`, show: true },
+                { id: "scan", label: `📷 ${t("scan")}`, show: profile.role === "user" },
+                { id: "chat", label: `🤖 ${t("chat")}`, show: true },
+                { id: "map", label: `🗺️ ${t("map")}`, show: true },
+                { id: "tx", label: `📋 ${t("tx")}`, show: !!token },
+                { id: "reports", label: `📄 ${t("reports")}`, show: !!token },
+                { id: "newtx", label: `➕ ${t("newtx")}`, show: ["dp", "bank"].includes(profile.role) },
+                { id: "kelola", label: `📦 ${t("kelola")}`, show: profile.role === "pelapak" },
+                { id: "settings", label: `⚙️ ${t("settings")}`, show: ["bank", "dp"].includes(profile.role) },
+                { id: "pickup", label: `🚛 ${t("pickup")}`, show: ["dp", "bank"].includes(profile.role) },
+              ].filter(tb => tb.show).map(tb => (
+                <button key={tb.id} className="bt" onClick={() => setTab(tb.id)} style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, background: tab === tb.id ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.02)", color: tab === tb.id ? "var(--g)" : "var(--t2)", border: `1px solid ${tab === tb.id ? "rgba(34,197,94,.25)" : "var(--bdr)"}`, whiteSpace: "nowrap" }}>
+                  {tb.label}
                 </button>
               ))}
             </div>
 
-            {loading && <div style={{ textAlign: "center", padding: 40, color: "var(--t2)" }}>⏳ Memuat data...</div>}
+            {loading && <div style={{ textAlign: "center", padding: 40, color: "var(--t2)" }}>⏳ {lang === "id" ? "Memuat data..." : "Loading..."}</div>}
+
+            {/* ═── DASHBOARD TAB ──═ */}
+            {!loading && tab === "dashboard" && (
+              <div className="fu">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>📊 {t("dashboard")}</h3>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {[["week", t("week")], ["month", t("month")], ["all", t("all_time")]].map(([k, l]) => (
+                      <button key={k} className="bt" onClick={() => setDashPeriod(k)}
+                        style={{ padding: "4px 10px", fontSize: 10, fontWeight: 600, background: dashPeriod === k ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.02)", color: dashPeriod === k ? "var(--g)" : "var(--t2)", border: `1px solid ${dashPeriod === k ? "rgba(34,197,94,.25)" : "var(--bdr)"}` }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Stats cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8, marginBottom: 16 }}>
+                  {[
+                    { label: t("total_tx"), value: computeStats.totalTx, icon: "📋", color: "var(--c)" },
+                    { label: t("done"), value: computeStats.doneTx, icon: "✅", color: "var(--g)" },
+                    { label: t("total_weight"), value: `${computeStats.totalWeight.toFixed(1)} kg`, icon: "⚖️", color: "var(--b)" },
+                    { label: t("total_value"), value: rp(computeStats.totalValue), icon: "💰", color: "var(--y)" },
+                  ].map(s => (
+                    <div key={s.label} className="c" style={{ padding: "14px 16px" }}>
+                      <div style={{ fontSize: 20, marginBottom: 4 }}>{s.icon}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "var(--d)", color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: 10, color: "var(--t2)", fontFamily: "var(--m)" }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Weekly chart */}
+                <div className="c" style={{ padding: "16px 20px", marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)", marginBottom: 10 }}>{lang === "id" ? "Berat 7 Hari Terakhir (kg)" : "Last 7 Days Weight (kg)"}</div>
+                  <MiniChart data={weeklyData} color="var(--g)" height={64} barWidth={24} />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "var(--t2)", fontFamily: "var(--m)", marginTop: 4 }}>
+                    {Array(7).fill(0).map((_, i) => {
+                      const d = new Date(Date.now() - (6 - i) * 864e5);
+                      return <span key={i}>{d.toLocaleDateString("id-ID", { weekday: "short" })}</span>;
+                    })}
+                  </div>
+                </div>
+
+                {/* Gamification section */}
+                <div className="c" style={{ padding: "16px 20px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)" }}>🏆 {t("points")}: <span style={{ color: "var(--y)", fontFamily: "var(--m)" }}>{myPoints}</span></div>
+                  </div>
+                  {myBadges.length > 0 && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                      {myBadges.map(b => <Badge key={b.label} color="var(--y)" outline>{b.icon} {b.label}</Badge>)}
+                    </div>
+                  )}
+                  {myBadges.length === 0 && <div style={{ fontSize: 11, color: "var(--t2)", marginBottom: 10 }}>{lang === "id" ? "Setor sampah untuk mendapatkan badge!" : "Recycle waste to earn badges!"}</div>}
+                </div>
+
+                {/* Leaderboard */}
+                <div className="c" style={{ padding: "16px 20px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)", marginBottom: 10 }}>🏅 {t("leaderboard")}</div>
+                  {leaderboard.length === 0 && <div style={{ fontSize: 11, color: "var(--t2)" }}>{t("no_data")}</div>}
+                  {leaderboard.filter(u => (u.points || 0) > 0).slice(0, 10).map((u, i) => (
+                    <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--bdr)", fontSize: 11 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: i < 3 ? "var(--y)" : "var(--t2)", width: 20, textAlign: "center" }}>#{i + 1}</span>
+                        <span style={{ color: "var(--w)", fontWeight: 600 }}>{u.name}</span>
+                        <Badge color={roleColor[u.role]}>{roleIcon[u.role]}</Badge>
+                      </div>
+                      <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: "var(--y)" }}>{u.points || 0} pts</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* ═── PRICES TAB ──═ */}
             {!loading && tab === "prices" && (
@@ -1107,14 +1371,15 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                     </div>
                   )}
                   {profile.role === "user" && (
-                    <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 0.3fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
                       <span>ITEM</span>
                       <span style={{ textAlign: "right", color: "var(--y)" }}>📍 HARGA</span>
+                      <span style={{ textAlign: "center" }}>🔔</span>
                     </div>
                   )}
                   {/* Data rows */}
                   {filteredPrices.map((p, i) => (
-                    <div key={p.item_code} style={{ display: "grid", gridTemplateColumns: profile.role === "pelapak" || profile.role === "user" ? "3fr 1fr" : "2.5fr 1fr 1fr", padding: "8px 16px", borderTop: "1px solid var(--bdr)", fontSize: 11, alignItems: "center" }}>
+                    <div key={p.item_code} style={{ display: "grid", gridTemplateColumns: profile.role === "pelapak" ? "3fr 1fr" : profile.role === "user" ? "3fr 1fr 0.3fr" : "2.5fr 1fr 1fr", padding: "8px 16px", borderTop: "1px solid var(--bdr)", fontSize: 11, alignItems: "center" }}>
                       <span><span style={{ fontFamily: "var(--m)", fontSize: 9, color: "var(--t2)", marginRight: 6 }}>{p.item_code}</span><span style={{ color: "var(--w)" }}>{p.name}</span>{p.unit !== "kg" && <span style={{ fontSize: 8, color: "var(--t2)", marginLeft: 4 }}>/{p.unit}</span>}</span>
                       {profile.role === "pelapak" && (
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--p)" }}>{rp(p.pelapak_price)}</span>
@@ -1127,9 +1392,12 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--b)" }}>{rp(p.bank_price)}</span>
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--y)" }}>{rp(p.dp_price)}</span>
                       </>)}
-                      {profile.role === "user" && (
+                      {profile.role === "user" && (<>
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--y)" }}>{rp(p.dp_price || p.pelapak_price)}</span>
-                      )}
+                        <button className="bt" onClick={() => toggleWatch(p.item_code)} style={{ padding: "2px 6px", fontSize: 9, background: watchedItems.includes(p.item_code) ? "rgba(245,158,11,.12)" : "rgba(255,255,255,.03)", color: watchedItems.includes(p.item_code) ? "var(--y)" : "var(--t2)", border: `1px solid ${watchedItems.includes(p.item_code) ? "rgba(245,158,11,.2)" : "var(--bdr)"}` }}>
+                          {watchedItems.includes(p.item_code) ? "🔔" : "🔕"}
+                        </button>
+                      </>)}
                     </div>
                   ))}
                 </div>
@@ -1283,62 +1551,80 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
               </div>
             )}
 
-            {/* ═── NETWORK TAB ──═ */}
-            {!loading && tab === "network" && (
+            {/* ═── MAP TAB ──═ */}
+            {!loading && tab === "map" && (
               <div className="fu">
-                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--y)", marginBottom: 10 }}>📍 Drop Points ({dropPoints.length})</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 8, marginBottom: 22 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 10 }}>🗺️ {t("map")} — {t("network")}</h3>
+                {/* Leaflet map container */}
+                <div ref={mapRef} className="c" style={{ height: 350, borderRadius: 14, overflow: "hidden", marginBottom: 14 }} />
+                {/* Load Leaflet dynamically */}
+                {(() => {
+                  // eslint-disable-next-line react-hooks/rules-of-hooks
+                  useEffect(() => {
+                    if (tab !== "map" || !mapRef.current) return;
+                    if (mapInstanceRef.current) { mapInstanceRef.current.invalidateSize(); return; }
+                    const loadLeaflet = () => {
+                      if (document.getElementById("leaflet-css")) { initMap(); return; }
+                      const link = document.createElement("link");
+                      link.id = "leaflet-css"; link.rel = "stylesheet";
+                      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+                      document.head.appendChild(link);
+                      const script = document.createElement("script");
+                      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+                      script.onload = () => initMap();
+                      document.head.appendChild(script);
+                    };
+                    const initMap = () => {
+                      if (!window.L || !mapRef.current || mapInstanceRef.current) return;
+                      const map = window.L.map(mapRef.current).setView([-6.26, 106.69], 13);
+                      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        attribution: "&copy; OpenStreetMap"
+                      }).addTo(map);
+                      mapInstanceRef.current = map;
+                      // DP markers
+                      for (const dp of dropPoints) {
+                        if (!dp.lat || !dp.lng) continue;
+                        window.L.circleMarker([dp.lat, dp.lng], { radius: 8, fillColor: "#F59E0B", color: "#D97706", weight: 2, fillOpacity: 0.8 })
+                          .addTo(map)
+                          .bindPopup(`<b>📍 ${dp.name}</b><br>${dp.address}<br>👤 ${dp.operator_name || "-"}<br>Stok: ${Number(dp.current_stock_kg).toFixed(0)}/${Number(dp.capacity_kg).toFixed(0)} kg<br><a href="https://www.google.com/maps?q=${dp.lat},${dp.lng}" target="_blank">Navigate →</a>`);
+                      }
+                      // BS markers
+                      for (const bs of bankSampah) {
+                        if (!bs.lat || !bs.lng) continue;
+                        window.L.circleMarker([bs.lat, bs.lng], { radius: 8, fillColor: "#3B82F6", color: "#2563EB", weight: 2, fillOpacity: 0.8 })
+                          .addTo(map)
+                          .bindPopup(`<b>🏦 ${bs.name}</b><br>${bs.address}<br>⏰ ${bs.operating_hours || "-"}<br><a href="https://www.google.com/maps?q=${bs.lat},${bs.lng}" target="_blank">Navigate →</a>`);
+                      }
+                    };
+                    loadLeaflet();
+                    return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
+                  }, [tab]);
+                  return null;
+                })()}
+
+                {/* Card listing below map */}
+                <h4 style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--d)", color: "var(--y)", marginBottom: 8 }}>📍 Drop Points ({dropPoints.length})</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 8, marginBottom: 18 }}>
                   {dropPoints.map((dp, i) => (
-                    <div key={dp.id} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "16px 18px", cursor: "pointer" }} onClick={() => setDpDetail(dpDetail === dp.id ? null : dp.id)}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <div key={dp.id} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <Badge color={dp.status === "active" ? "var(--g)" : "var(--r)"}>{dp.status === "active" ? "● AKTIF" : "NONAKTIF"}</Badge>
                         <span style={{ fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)" }}>{dp.id}</span>
                       </div>
-                      <h4 style={{ fontSize: 13, fontWeight: 700, color: "var(--w)", fontFamily: "var(--d)", marginBottom: 2 }}>{dp.name}</h4>
-                      <div style={{ fontSize: 10, color: "var(--t2)", marginBottom: 6 }}>{dp.address}</div>
-                      <div style={{ fontSize: 10, color: "var(--t2)" }}>👤 {dp.operator_name || "-"} • {dp.type}</div>
-                      {dp.bank_sampah_id && <div style={{ fontSize: 9, color: "var(--b)", marginTop: 2 }}>🏦 {bankSampah.find(b => b.id === dp.bank_sampah_id)?.name || "?"} • Margin: {Math.round(Number(dp.margin) * 100)}%</div>}
-                      {/* Stock bar */}
-                      <div style={{ marginTop: 8 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "var(--t2)", marginBottom: 2 }}>
-                          <span>Stok</span>
-                          <span style={{ fontFamily: "var(--m)" }}>{Number(dp.current_stock_kg).toFixed(0)}/{Number(dp.capacity_kg).toFixed(0)} kg</span>
-                        </div>
-                        <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,.04)", overflow: "hidden" }}>
-                          <div style={{ height: "100%", borderRadius: 2, width: `${Math.min((dp.current_stock_kg / dp.capacity_kg) * 100, 100)}%`, background: dp.current_stock_kg / dp.capacity_kg > .8 ? "linear-gradient(90deg,var(--y),var(--r))" : "linear-gradient(90deg,var(--g),var(--c))", transition: "width .5s" }} />
-                        </div>
-                      </div>
-                      {dpDetail === dp.id && (
-                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--bdr)", animation: "fu .3s ease", fontSize: 10, fontFamily: "var(--m)", color: "var(--t2)" }}>
-                          📐 {dp.lat?.toFixed(6)}, {dp.lng?.toFixed(6)}
-                          <br />
-                          <a href={`https://www.google.com/maps?q=${dp.lat},${dp.lng}`} target="_blank" rel="noreferrer" style={{ color: "var(--c)", textDecoration: "none" }}>🗺️ Buka di Google Maps →</a>
-                        </div>
-                      )}
+                      <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--w)", fontFamily: "var(--d)" }}>{dp.name}</h4>
+                      <div style={{ fontSize: 10, color: "var(--t2)" }}>{dp.address}</div>
+                      <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 2 }}>👤 {dp.operator_name || "-"} • Stok: {Number(dp.current_stock_kg).toFixed(0)}/{Number(dp.capacity_kg).toFixed(0)} kg</div>
+                      {dp.bank_sampah_id && <div style={{ fontSize: 9, color: "var(--b)", marginTop: 2 }}>🏦 {bankSampah.find(b => b.id === dp.bank_sampah_id)?.name || "?"}</div>}
                     </div>
                   ))}
                 </div>
 
-                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--b)", marginBottom: 10 }}>🏦 Bank Sampah ({bankSampah.length})</h3>
+                <h4 style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--d)", color: "var(--b)", marginBottom: 8 }}>🏦 Bank Sampah ({bankSampah.length})</h4>
                 {bankSampah.map((bs, i) => (
-                  <div key={bs.id} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "14px 18px", marginBottom: 6 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <h4 style={{ fontSize: 13, fontWeight: 700, color: "var(--w)", fontFamily: "var(--d)" }}>{bs.name}
-                          {bs.rating && <Badge color="var(--y)"> ⭐ {bs.rating}</Badge>}
-                        </h4>
-                        <div style={{ fontSize: 10, color: "var(--t2)" }}>{bs.address}</div>
-                        <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 2 }}>
-                          ⏰ {bs.operating_hours || "-"} • 📞 {bs.phone || "-"}
-                          {bs.website && <> • <a href={`https://${bs.website}`} target="_blank" rel="noreferrer" style={{ color: "var(--c)" }}>🌐 {bs.website}</a></>}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "right", fontSize: 10, fontFamily: "var(--m)", color: "var(--t2)" }}>
-                        {bs.monthly_capacity_kg && <div>Cap: {bs.monthly_capacity_kg} kg/bln</div>}
-                      </div>
-                    </div>
-                    {bs.pelapak_id && <div style={{ marginTop: 4, fontSize: 9, color: "var(--p)" }}>🏭 Pelapak: {pelapakList.find(pl => pl.id === bs.pelapak_id)?.name || "?"} • Margin: {Math.round(Number(bs.margin) * 100)}%</div>}
-                    {bs.specialty && <div style={{ marginTop: 6 }}><Badge color="var(--c)" outline>{bs.specialty}</Badge></div>}
+                  <div key={bs.id} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "12px 16px", marginBottom: 6 }}>
+                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--w)", fontFamily: "var(--d)" }}>{bs.name} {bs.rating && <Badge color="var(--y)">⭐ {bs.rating}</Badge>}</h4>
+                    <div style={{ fontSize: 10, color: "var(--t2)" }}>{bs.address} • ⏰ {bs.operating_hours || "-"}</div>
+                    {bs.pelapak_id && <div style={{ fontSize: 9, color: "var(--p)", marginTop: 2 }}>🏭 {pelapakList.find(pl => pl.id === bs.pelapak_id)?.name || "?"} • {t("margin")}: {Math.round(Number(bs.margin) * 100)}%</div>}
                   </div>
                 ))}
               </div>
@@ -1347,38 +1633,91 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             {/* ═── TRANSACTIONS TAB ──═ */}
             {!loading && tab === "tx" && (
               <div className="fu">
-                <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>📋 Transaksi ({transactions.length})</h3>
-                  <button className="bt" onClick={loadData} style={{ padding: "6px 14px", background: "rgba(255,255,255,.04)", color: "var(--t2)", fontSize: 11, border: "1px solid var(--bdr)" }}>🔄 Refresh</button>
+                <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>📋 {t("tx")} ({transactions.length})</h3>
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    {["all", "pending", "pickup", "done", "cancelled"].map(s => (
+                      <button key={s} className="bt" onClick={() => setTxStatusFilter(s)}
+                        style={{ padding: "4px 10px", fontSize: 10, fontWeight: 600, background: txStatusFilter === s ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.02)", color: txStatusFilter === s ? "var(--g)" : "var(--t2)", border: `1px solid ${txStatusFilter === s ? "rgba(34,197,94,.25)" : "var(--bdr)"}` }}>
+                        {s === "all" ? (lang === "id" ? "Semua" : "All") : t(s === "pickup" ? "pickup_s" : s)}
+                      </button>
+                    ))}
+                    <button className="bt" onClick={loadData} style={{ padding: "4px 10px", background: "rgba(255,255,255,.04)", color: "var(--t2)", fontSize: 10, border: "1px solid var(--bdr)" }}>🔄</button>
+                  </div>
                 </div>
-                {transactions.length === 0 && <div style={{ padding: 30, textAlign: "center", color: "var(--t2)" }}>Belum ada transaksi.</div>}
-                {transactions.map((tx, i) => {
+                {filteredTx.length === 0 && <div style={{ padding: 30, textAlign: "center", color: "var(--t2)" }}>{t("no_data")}</div>}
+                {filteredTx.map((tx, i) => {
                   const items = txItems.filter(ti => ti.transaction_id === tx.id);
                   const total = getTxTotal(tx.id);
+                  const isExpanded = expandedTx === tx.id;
+                  const statusColor = { pending: "var(--y)", pickup: "var(--c)", done: "var(--g)", cancelled: "var(--r)" };
+                  const statusLabel = { pending: `⏳ ${t("pending")}`, pickup: `🚛 ${t("pickup_s")}`, done: `✓ ${t("done")}`, cancelled: `✕ ${t("cancelled")}` };
                   return (
-                    <div key={tx.id} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "12px 16px", marginBottom: 6 }}>
+                    <div key={tx.id} className={`c fu${Math.min(i + 1, 4)}`} style={{ padding: "12px 16px", marginBottom: 6, cursor: "pointer" }} onClick={() => setExpandedTx(isExpanded ? null : tx.id)}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontFamily: "var(--m)", fontSize: 11, fontWeight: 600, color: "var(--w)" }}>{tx.id}</span>
-                          <Badge color={tx.status === "done" ? "var(--g)" : tx.status === "cancelled" ? "var(--r)" : "var(--y)"}>
-                            {tx.status === "done" ? "✓ DONE" : tx.status === "cancelled" ? "✕ BATAL" : "⏳ PENDING"}
-                          </Badge>
+                          <Badge color={statusColor[tx.status] || "var(--t2)"}>{statusLabel[tx.status] || tx.status}</Badge>
                         </div>
                         <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: roleColor[profile.role], fontSize: 13 }}>{rp(total)}</span>
                       </div>
                       <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 3 }}>
                         👤 {tx.user_name} → 📍 {tx.drop_point_id} • {new Date(tx.created_at).toLocaleDateString("id-ID")}
                       </div>
-                      {items.length > 0 && (
+                      {!isExpanded && items.length > 0 && (
                         <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 2 }}>
                           {items.map(it => `${it.waste_name} (${Number(it.weight_kg).toFixed(1)}kg)`).join(" + ")}
                         </div>
                       )}
-                      {/* Action buttons for DP/Bank */}
-                      {tx.status === "pending" && ["dp", "bank"].includes(profile.role) && (
-                        <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-                          <button className="bt" onClick={() => updateTxStatus(tx.id, "done")} style={{ padding: "6px 14px", background: "rgba(34,197,94,.12)", color: "var(--g)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(34,197,94,.2)" }}>✓ Selesai</button>
-                          <button className="bt" onClick={() => updateTxStatus(tx.id, "cancelled")} style={{ padding: "6px 14px", background: "rgba(239,68,68,.08)", color: "var(--r)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(239,68,68,.15)" }}>✕ Batal</button>
+                      {/* Expanded detail */}
+                      {isExpanded && (
+                        <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--bdr)", animation: "fu .3s ease" }}>
+                          {/* Status timeline */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 12 }}>
+                            {["pending", "pickup", "done"].map((st, si) => {
+                              const reached = st === "pending" || (st === "pickup" && ["pickup", "done"].includes(tx.status)) || (st === "done" && tx.status === "done");
+                              const isCancelled = tx.status === "cancelled";
+                              return (
+                                <React.Fragment key={st}>
+                                  {si > 0 && <div style={{ flex: 1, height: 2, background: reached && !isCancelled ? "var(--g)" : "var(--bdr)" }} />}
+                                  <div style={{ width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, background: reached && !isCancelled ? `${statusColor[st]}20` : "rgba(255,255,255,.03)", color: reached && !isCancelled ? statusColor[st] : "var(--t2)", border: `2px solid ${reached && !isCancelled ? statusColor[st] : "var(--bdr)"}` }}>
+                                    {si + 1}
+                                  </div>
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "var(--t2)", fontFamily: "var(--m)", marginBottom: 12, marginTop: -8, paddingLeft: 2, paddingRight: 2 }}>
+                            <span>{t("pending")}</span><span>{t("pickup_s")}</span><span>{t("done")}</span>
+                          </div>
+                          {/* Item detail table */}
+                          {items.map(it => {
+                            const p = effectivePrices.find(pr => pr.item_code === it.waste_code);
+                            const price = p?.dp_price || p?.pelapak_price || 0;
+                            return (
+                              <div key={it.id} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid var(--bdr)", fontSize: 10 }}>
+                                <span style={{ color: "var(--t)" }}>{it.waste_name} <span style={{ color: "var(--t2)", fontFamily: "var(--m)" }}>({Number(it.weight_kg).toFixed(1)}kg)</span></span>
+                                <span style={{ fontFamily: "var(--m)", fontWeight: 600, color: "var(--g)" }}>{rp(price * Number(it.weight_kg))}</span>
+                              </div>
+                            );
+                          })}
+                          {/* QR code */}
+                          <div style={{ textAlign: "center", marginTop: 12 }}>
+                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(tx.id)}&bgcolor=${theme === "light" ? "F8FAFC" : "131B2B"}&color=${theme === "light" ? "0F172A" : "F1F5F9"}`} alt="QR" style={{ borderRadius: 8 }} width={120} height={120} />
+                            <div style={{ fontSize: 9, color: "var(--t2)", fontFamily: "var(--m)", marginTop: 4 }}>{tx.id}</div>
+                          </div>
+                          {/* Action buttons */}
+                          {["dp", "bank"].includes(profile.role) && tx.status !== "done" && tx.status !== "cancelled" && (
+                            <div style={{ marginTop: 10, display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
+                              {tx.status === "pending" && (
+                                <button className="bt" onClick={() => updateTxStatus(tx.id, "pickup")} style={{ padding: "6px 14px", background: "rgba(6,182,212,.12)", color: "var(--c)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(6,182,212,.2)" }}>🚛 {t("pickup_s")}</button>
+                              )}
+                              {(tx.status === "pending" || tx.status === "pickup") && (
+                                <button className="bt" onClick={() => updateTxStatus(tx.id, "done")} style={{ padding: "6px 14px", background: "rgba(34,197,94,.12)", color: "var(--g)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(34,197,94,.2)" }}>✓ {t("done")}</button>
+                              )}
+                              <button className="bt" onClick={() => updateTxStatus(tx.id, "cancelled")} style={{ padding: "6px 14px", background: "rgba(239,68,68,.08)", color: "var(--r)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(239,68,68,.15)" }}>✕ {t("cancelled")}</button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1432,9 +1771,27 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                     </div>
                   )}
 
+                  {/* Photo evidence */}
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>📸 {lang === "id" ? "Foto Bukti (opsional)" : "Photo Evidence (optional)"}</label>
+                    <input ref={txPhotoRef} type="file" accept="image/*" capture="environment" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) { const { preview } = await resizeAndEncode(file); setTxPhoto(preview); }
+                      e.target.value = "";
+                    }} style={{ display: "none" }} />
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <button className="bt" type="button" onClick={() => txPhotoRef.current?.click()}
+                        style={{ padding: "8px 14px", background: "rgba(255,255,255,.04)", color: "var(--t2)", fontSize: 11, border: "1px solid var(--bdr)" }}>
+                        📷 {lang === "id" ? "Ambil Foto" : "Take Photo"}
+                      </button>
+                      {txPhoto && <img src={txPhoto} alt="preview" style={{ height: 40, borderRadius: 6, border: "1px solid var(--bdr)" }} />}
+                      {txPhoto && <button className="bt" onClick={() => setTxPhoto(null)} style={{ padding: "4px 8px", background: "rgba(239,68,68,.08)", color: "var(--r)", fontSize: 10, border: "1px solid rgba(239,68,68,.15)" }}>✕</button>}
+                    </div>
+                  </div>
+
                   <button className="bt" onClick={submitTx}
                     style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg,#22C55E,#16A34A)", color: "#fff", fontWeight: 700, fontSize: 14 }}>
-                    ✅ Buat Transaksi
+                    ✅ {t("create_tx")}
                   </button>
                 </div>
               </div>
@@ -1634,13 +1991,141 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 })}
               </div>
             )}
+
+            {/* ═── REPORTS TAB ──═ */}
+            {!loading && tab === "reports" && (
+              <div className="fu">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>📄 {t("reports")}</h3>
+                  <button className="bt" onClick={() => {
+                    const rows = [["ID", lang === "id" ? "Tanggal" : "Date", "Status", lang === "id" ? "Pengguna" : "User", "Drop Point", `${t("weight")} (kg)`, `${t("value")} (Rp)`]];
+                    const txs = reportRange.from ? transactions.filter(tx => {
+                      const d = tx.created_at?.slice(0, 10);
+                      return (!reportRange.from || d >= reportRange.from) && (!reportRange.to || d <= reportRange.to);
+                    }) : transactions;
+                    for (const tx of txs) {
+                      const items = txItems.filter(i => i.transaction_id === tx.id);
+                      const w = items.reduce((s, it) => s + Number(it.weight_kg), 0);
+                      rows.push([tx.id, tx.created_at?.slice(0, 10), tx.status, tx.user_name, tx.drop_point_id, w.toFixed(1), Math.round(getTxTotal(tx.id))]);
+                    }
+                    downloadCSV(rows, `ecochain-report-${new Date().toISOString().slice(0, 10)}.csv`);
+                    flash(`✅ ${t("export_csv")} — ${txs.length} ${t("tx").toLowerCase()}`);
+                  }} style={{ padding: "6px 14px", background: "rgba(34,197,94,.12)", color: "var(--g)", fontSize: 11, fontWeight: 600, border: "1px solid rgba(34,197,94,.2)" }}>
+                    📥 {t("export_csv")}
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                  <input type="date" value={reportRange.from} onChange={e => setReportRange(r => ({ ...r, from: e.target.value }))} style={{ flex: 1, fontSize: 11 }} />
+                  <input type="date" value={reportRange.to} onChange={e => setReportRange(r => ({ ...r, to: e.target.value }))} style={{ flex: 1, fontSize: 11 }} />
+                </div>
+
+                {/* Monthly summary */}
+                {(() => {
+                  const months = {};
+                  const txs = reportRange.from ? transactions.filter(tx => {
+                    const d = tx.created_at?.slice(0, 10);
+                    return (!reportRange.from || d >= reportRange.from) && (!reportRange.to || d <= reportRange.to);
+                  }) : transactions;
+                  for (const tx of txs) {
+                    const m = tx.created_at?.slice(0, 7) || "Unknown";
+                    if (!months[m]) months[m] = { count: 0, weight: 0, value: 0, done: 0 };
+                    months[m].count++;
+                    if (tx.status === "done") months[m].done++;
+                    const items = txItems.filter(i => i.transaction_id === tx.id);
+                    months[m].weight += items.reduce((s, it) => s + Number(it.weight_kg), 0);
+                    months[m].value += getTxTotal(tx.id);
+                  }
+                  const sorted = Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
+                  return (
+                    <div className="c" style={{ overflow: "hidden" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr 1fr 1fr 0.8fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700 }}>
+                        <span>{lang === "id" ? "BULAN" : "MONTH"}</span><span>{t("total_tx")}</span><span style={{ textAlign: "right" }}>{t("weight")}</span><span style={{ textAlign: "right" }}>{t("value")}</span><span style={{ textAlign: "right" }}>{t("done")}</span>
+                      </div>
+                      {sorted.length === 0 && <div style={{ padding: 20, textAlign: "center", color: "var(--t2)", fontSize: 11 }}>{t("no_data")}</div>}
+                      {sorted.map(([m, d]) => (
+                        <div key={m} style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr 1fr 1fr 0.8fr", padding: "8px 16px", borderTop: "1px solid var(--bdr)", fontSize: 11, alignItems: "center" }}>
+                          <span style={{ fontFamily: "var(--m)", color: "var(--w)", fontWeight: 600 }}>{m}</span>
+                          <span style={{ color: "var(--t2)" }}>{d.count}</span>
+                          <span style={{ textAlign: "right", fontFamily: "var(--m)", color: "var(--b)" }}>{d.weight.toFixed(1)} kg</span>
+                          <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--g)" }}>{rp(d.value)}</span>
+                          <span style={{ textAlign: "right", fontFamily: "var(--m)", color: "var(--t2)" }}>{d.done}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
       </main>
 
+      {/* ═── PRICE ALERTS PANEL ──═ */}
+      {showAlerts && (
+        <div style={{ position: "fixed", top: 50, right: 16, zIndex: 9997, width: 300, maxHeight: 400, overflow: "auto" }} className="c fu">
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--bdr)", fontSize: 12, fontWeight: 700, color: "var(--w)", display: "flex", justifyContent: "space-between" }}>
+            <span>🔔 {t("alerts")}</span>
+            <button className="bt" onClick={() => setShowAlerts(false)} style={{ fontSize: 11, color: "var(--t2)", background: "none", border: "none" }}>✕</button>
+          </div>
+          {priceAlerts.length === 0 && <div style={{ padding: 16, fontSize: 11, color: "var(--t2)", textAlign: "center" }}>{lang === "id" ? "Tidak ada perubahan harga" : "No price changes"}</div>}
+          {priceAlerts.map(a => (
+            <div key={a.code} style={{ padding: "8px 16px", borderBottom: "1px solid var(--bdr)", fontSize: 11 }}>
+              <div style={{ color: "var(--w)", fontWeight: 600 }}>{a.name}</div>
+              <div style={{ fontFamily: "var(--m)", fontSize: 10 }}>
+                <span style={{ color: "var(--t2)" }}>{rp(a.prev)}</span>
+                <span style={{ margin: "0 4px" }}>→</span>
+                <span style={{ color: a.up ? "var(--g)" : "var(--r)", fontWeight: 700 }}>{rp(a.curr)} {a.up ? "↑" : "↓"}</span>
+              </div>
+            </div>
+          ))}
+          <div style={{ padding: "8px 16px", fontSize: 9, color: "var(--t2)" }}>
+            {lang === "id" ? `${watchedItems.length} item dipantau` : `${watchedItems.length} items watched`}
+          </div>
+        </div>
+      )}
+
+      {/* ═── PROFILE MODAL ──═ */}
+      {showProfile && profile && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setShowProfile(false)}>
+          <div className="c fu" style={{ padding: 28, maxWidth: 400, width: "90%", background: "var(--bg3)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg,${roleColor[profile.role]},${roleColor[profile.role]}88)`, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "#fff", fontFamily: "var(--d)" }}>
+                {(profile.name || "?")[0].toUpperCase()}
+              </div>
+              <div style={{ marginTop: 8, fontSize: 14, fontWeight: 700, color: "var(--w)", fontFamily: "var(--d)" }}>{profile.name}</div>
+              <div style={{ fontSize: 11, color: "var(--t2)" }}>{profile.email}</div>
+              <Badge color={roleColor[profile.role]}>{roleIcon[profile.role]} {roleLabel[profile.role]}</Badge>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>{t("name")}</label>
+              <input value={profileForm.name} onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>{t("new_pw")} ({lang === "id" ? "kosongkan jika tidak ubah" : "leave blank to keep"})</label>
+              <input type="password" value={profileForm.newPassword} onChange={e => setProfileForm(f => ({ ...f, newPassword: e.target.value }))} placeholder="••••••••" minLength={6} />
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="bt" onClick={saveProfile} style={{ flex: 1, padding: "12px", background: "linear-gradient(135deg,#22C55E,#16A34A)", color: "#fff", fontWeight: 700, fontSize: 13 }}>{t("save_profile")}</button>
+              <button className="bt" onClick={() => setShowProfile(false)} style={{ padding: "12px 18px", background: "rgba(255,255,255,.04)", color: "var(--t2)", fontSize: 13, border: "1px solid var(--bdr)" }}>{t("cancel")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═── PWA INSTALL BANNER ──═ */}
+      {installPrompt && (
+        <div style={{ position: "fixed", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 9999, padding: "10px 20px", borderRadius: 12, background: "rgba(34,197,94,.92)", color: "#fff", fontWeight: 600, fontSize: 12, backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,.4)", display: "flex", alignItems: "center", gap: 12, animation: "pop .25s ease" }}>
+          <span>📲 {t("install_app")}</span>
+          <button className="bt" onClick={async () => { installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null); }}
+            style={{ padding: "6px 14px", background: "#fff", color: "#16A34A", fontWeight: 700, fontSize: 11, border: "none" }}>Install</button>
+          <button className="bt" onClick={() => setInstallPrompt(null)} style={{ background: "none", color: "rgba(255,255,255,.7)", border: "none", fontSize: 14 }}>✕</button>
+        </div>
+      )}
+
       <footer style={{ padding: "16px 20px", textAlign: "center", borderTop: "1px solid var(--bdr)", fontSize: 9, color: "var(--t2)", fontFamily: "var(--m)", lineHeight: 1.8 }}>
-        EcoChain AI Marketplace • Supabase Connected • Live Cascading Prices
-        <br />Harga berlaku 02 Jan 2026 • Network: Pondok Aren & Serpong Utara, Tangerang Selatan
+        EcoChain AI Marketplace • Supabase Connected • Per-Entity Pricing
+        <br />Network: Pondok Aren & Serpong Utara, Tangerang Selatan
       </footer>
     </div>
   );
