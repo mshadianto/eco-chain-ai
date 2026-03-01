@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-EcoChain AI Marketplace is a single-file React app for a waste management circular economy platform serving Pondok Aren & Serpong Utara, Tangerang Selatan, Indonesia. The production app lives in `src/ecochain-live.jsx` (~1,230 lines).
+EcoChain AI Marketplace is a single-file React app for a waste management circular economy platform serving Pondok Aren & Serpong Utara, Tangerang Selatan, Indonesia. The production app lives in `src/ecochain-live.jsx` (~3,860 lines).
 
 ## Architecture
 
@@ -33,9 +33,11 @@ npm run deploy     # Build + deploy to Cloudflare Workers
 
 Lightweight client via raw `fetch` (no SDK in live version). Object `sb` provides: `query()`, `insert()`, `update()`, `rpc()`, `signUp()`, `signIn()`, `getUser()`.
 
-**Database tables:** profiles, transactions, transaction_items, margin_config (deprecated), pelapak_prices, bank_sampah, drop_points, pickup_schedules, price_history, waste_categories, waste_items
+**Database tables:** profiles, transactions, transaction_items, margin_config (deprecated), pelapak_prices, bank_sampah, drop_points, pickup_schedules, price_history, waste_categories, waste_items, reviews, wallet_transactions, recycled_products, disputes, audit_logs, announcements
 
-Schema: `supabase-schema.sql`
+Schema: `supabase-schema.sql` + migration files (`migration-*.sql`)
+
+**RLS Notes:** `profiles` has SELECT/UPDATE policies for authenticated users. `pelapak_prices` has SELECT (all authenticated), INSERT/UPDATE/DELETE (own pelapak_id only). `bank_sampah` and `drop_points` have SELECT (all) and UPDATE (own user_id only, added via `migration-bank-sampah-rls.sql`).
 
 ### AI Integrations (Live — Direct Frontend Calls)
 
@@ -56,8 +58,10 @@ End users see Drop Point prices (user level removed). Prices are computed on the
 Auth via Supabase email/password. Role stored in `profiles` table.
 - **user**: Prices (select DP to view), Scan (AI vision), Chat AI, Network, Transactions
 - **dp** (Drop Point): + Create TX, Pengaturan (select Bank Sampah + margin), Pickup schedules
-- **bank** (Bank Sampah): + Pengaturan (select Pelapak + margin), Pickup schedules
+- **bank** (Bank Sampah): + Create TX (select DP), Pengaturan (select Pelapak + margin), Pickup schedules
 - **pelapak**: + Kelola Harga (input/upload prices per item)
+
+Tabs visible per role (when logged in): Dashboard, Harga, Chat AI, Peta, Transaksi, Laporan, Pickup, Dompet, Marketplace, Komunitas. Role-specific: Scan (user only), Buat TX (dp/bank), Pengaturan (dp/bank), Kelola (pelapak). Tab bar uses horizontal scroll with `flexShrink: 0` on buttons.
 
 ### Data Flow
 

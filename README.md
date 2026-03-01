@@ -8,10 +8,14 @@ Marketplace ekonomi sirkular sampah berbasis AI untuk area Pondok Aren & Serpong
 
 - **Scan Sampah (AI Vision)** — Foto tumpukan sampah, AI identifikasi jenis & estimasi harga otomatis menggunakan Google Gemini Vision
 - **Chat AI Assistant** — Tanya harga, lokasi drop point, tips sorting via Groq Llama 3 dengan konteks data live dari database
-- **Harga Cascade Realtime** — Model harga 4 level (Pelapak → Bank Sampah → Drop Point → User) dengan margin yang bisa diatur
+- **Harga Cascade Realtime** — Model harga 3 level (Pelapak → Bank Sampah → Drop Point) dengan margin per-entity yang bisa diatur
 - **Multi-Role System** — UI berbeda untuk End User, Drop Point, Bank Sampah, dan Pelapak
-- **Transaksi & Pickup** — Buat transaksi, tracking status, jadwal pickup
+- **Transaksi & Pickup** — Buat transaksi (DP & Bank Sampah), tracking status, jadwal pickup
 - **Network Map** — Data drop point dan bank sampah real (GPS, stok, kapasitas)
+- **Dashboard & Laporan** — Statistik transaksi, chart, export laporan
+- **Dompet Digital** — Wallet transactions untuk setiap user
+- **Marketplace** — Jual beli produk daur ulang
+- **Komunitas** — Messaging, challenge quests, pengumuman
 
 ## Tech Stack
 
@@ -51,44 +55,44 @@ npm run deploy
 
 ## Database
 
-Schema SQL ada di `supabase-schema.sql`. Jalankan di Supabase Dashboard > SQL Editor.
+Schema SQL ada di `supabase-schema.sql` + migration files (`migration-*.sql`). Jalankan di Supabase Dashboard > SQL Editor.
 
-**Tabel:** profiles, transactions, transaction_items, margin_config, bank_sampah, drop_points, pickup_schedules, waste_categories, waste_items, price_history
+**Tabel:** profiles, transactions, transaction_items, pelapak_prices, bank_sampah, drop_points, pickup_schedules, waste_categories, waste_items, price_history, reviews, wallet_transactions, recycled_products, disputes, audit_logs, announcements, margin_config (deprecated)
 
-**View:** `v_prices` — harga cascade otomatis dihitung dari margin_config
+Harga dihitung di frontend via `effectivePrices` useMemo dari `pelapak_prices` + margin per-entity.
 
 ## Struktur Project
 
 ```
 src/
-  main.jsx              — Entry point
-  ecochain-live.jsx     — Aplikasi utama (production)
-ecochain-marketplace.jsx — Legacy file (tidak dipakai)
-supabase-schema.sql      — Database schema
-index.html               — HTML shell
-vite.config.js           — Vite config
-wrangler.jsonc           — Cloudflare Workers config
+  main.jsx                    — Entry point
+  ecochain-live.jsx           — Aplikasi utama (production, ~3,860 lines)
+ecochain-marketplace.jsx       — Legacy file (tidak dipakai)
+supabase-schema.sql            — Database schema
+migration-bank-sampah-rls.sql  — RLS policies untuk bank_sampah & drop_points
+index.html                     — HTML shell
+vite.config.js                 — Vite config
+wrangler.jsonc                 — Cloudflare Workers config
 ```
 
 ## Role System
 
 | Role | Akses |
 |------|-------|
-| **User** | Harga, Scan AI, Chat AI, Network, Transaksi |
-| **Drop Point** | + Buat Transaksi, Pickup |
-| **Bank Sampah** | + Margin Management, Pickup |
-| **Pelapak** | + Margin Management |
+| **User** | Harga (pilih DP), Scan AI, Chat AI, Peta, Transaksi, Dashboard, Dompet, Marketplace, Komunitas |
+| **Drop Point** | + Buat TX, Pengaturan (pilih Bank Sampah + margin), Pickup |
+| **Bank Sampah** | + Buat TX (pilih DP), Pengaturan (pilih Pelapak + margin), Pickup |
+| **Pelapak** | + Kelola Harga (input/upload harga per item) |
 
-## Model Harga Cascade
+## Model Harga Per-Entity (3 Level)
 
 ```
-Pelapak (harga pasar)
-  └─ Bank Sampah = Pelapak × (1 - margin₁)     default 15%
-       └─ Drop Point = Bank × (1 - margin₂)     default 20%
-            └─ User = DP × (1 - margin₃)        default 25%
+Pelapak (harga pasar per item, tabel pelapak_prices)
+  └─ Bank Sampah = Pelapak × (1 - margin)     default 15%
+       └─ Drop Point = Bank × (1 - margin)     default 20%
 ```
 
-Margin bisa diatur realtime oleh role Bank Sampah dan Pelapak. Perubahan langsung update `v_prices` view.
+End user melihat harga Drop Point. Setiap entity bisa set margin sendiri via Pengaturan. Harga dihitung di frontend via `effectivePrices` useMemo.
 
 ## AI Features
 
