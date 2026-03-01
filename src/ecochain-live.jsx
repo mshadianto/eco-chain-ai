@@ -2081,7 +2081,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
 
             {/* Tabs */}
             <div style={{ position: "relative", marginBottom: 16 }}>
-              <div style={{ display: "flex", gap: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: 2, paddingRight: 52 }}>
+              <div style={{ display: "flex", gap: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: 2 }}>
                 {[
                   { id: "dashboard", label: `📊 ${t("dashboard")}`, show: !!token },
                   { id: "prices", label: `💰 ${t("prices")}`, show: true },
@@ -2102,6 +2102,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                     {tb.label}
                   </button>
                 ))}
+                <div style={{ minWidth: 48, flexShrink: 0 }} />
               </div>
               <div style={{ position: "absolute", right: 0, top: 0, bottom: 2, width: 48, background: `linear-gradient(to right, transparent, ${theme === "light" ? "#f8fafc" : "#080C14"})`, pointerEvents: "none" }} />
             </div>
