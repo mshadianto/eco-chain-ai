@@ -2080,7 +2080,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             </div>
 
             {/* Tabs */}
-            <div style={{ display: "flex", gap: 4, marginBottom: 16, overflowX: "auto" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 16 }}>
               {[
                 { id: "dashboard", label: `📊 ${t("dashboard")}`, show: !!token },
                 { id: "prices", label: `💰 ${t("prices")}`, show: true },
