@@ -2080,27 +2080,30 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             </div>
 
             {/* Tabs */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 16 }}>
-              {[
-                { id: "dashboard", label: `📊 ${t("dashboard")}`, show: !!token },
-                { id: "prices", label: `💰 ${t("prices")}`, show: true },
-                { id: "scan", label: `📷 ${t("scan")}`, show: profile.role === "user" },
-                { id: "chat", label: `🤖 ${t("chat")}`, show: true },
-                { id: "map", label: `🗺️ ${t("map")}`, show: true },
-                { id: "tx", label: `📋 ${t("tx")}`, show: !!token },
-                { id: "reports", label: `📄 ${t("reports")}`, show: !!token },
-                { id: "newtx", label: `➕ ${t("newtx")}`, show: ["dp", "bank"].includes(profile.role) },
-                { id: "kelola", label: `📦 ${t("kelola")}`, show: profile.role === "pelapak" },
-                { id: "settings", label: `⚙️ ${t("settings")}`, show: ["bank", "dp"].includes(profile.role) },
-                { id: "pickup", label: `🚛 ${t("pickup")}`, show: !!token },
-                { id: "wallet", label: `💳 ${t("wallet")}`, show: !!token },
-                { id: "marketplace", label: `🛒 ${t("marketplace")}`, show: !!token },
-                { id: "community", label: `🌱 ${t("community")}`, show: !!token },
-              ].filter(tb => tb.show).map(tb => (
-                <button key={tb.id} className="bt" onClick={() => setTab(tb.id)} style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, background: tab === tb.id ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.02)", color: tab === tb.id ? "var(--g)" : "var(--t2)", border: `1px solid ${tab === tb.id ? "rgba(34,197,94,.25)" : "var(--bdr)"}`, whiteSpace: "nowrap" }}>
-                  {tb.label}
-                </button>
-              ))}
+            <div style={{ position: "relative", marginBottom: 16 }}>
+              <div style={{ display: "flex", gap: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: 2 }}>
+                {[
+                  { id: "dashboard", label: `📊 ${t("dashboard")}`, show: !!token },
+                  { id: "prices", label: `💰 ${t("prices")}`, show: true },
+                  { id: "scan", label: `📷 ${t("scan")}`, show: profile.role === "user" },
+                  { id: "chat", label: `🤖 ${t("chat")}`, show: true },
+                  { id: "map", label: `🗺️ ${t("map")}`, show: true },
+                  { id: "tx", label: `📋 ${t("tx")}`, show: !!token },
+                  { id: "reports", label: `📄 ${t("reports")}`, show: !!token },
+                  { id: "newtx", label: `➕ ${t("newtx")}`, show: ["dp", "bank"].includes(profile.role) },
+                  { id: "kelola", label: `📦 ${t("kelola")}`, show: profile.role === "pelapak" },
+                  { id: "settings", label: `⚙️ ${t("settings")}`, show: ["bank", "dp"].includes(profile.role) },
+                  { id: "pickup", label: `🚛 ${t("pickup")}`, show: !!token },
+                  { id: "wallet", label: `💳 ${t("wallet")}`, show: !!token },
+                  { id: "marketplace", label: `🛒 ${t("marketplace")}`, show: !!token },
+                  { id: "community", label: `🌱 ${t("community")}`, show: !!token },
+                ].filter(tb => tb.show).map(tb => (
+                  <button key={tb.id} className="bt" onClick={() => setTab(tb.id)} style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, flexShrink: 0, background: tab === tb.id ? "rgba(34,197,94,.1)" : "rgba(255,255,255,.02)", color: tab === tb.id ? "var(--g)" : "var(--t2)", border: `1px solid ${tab === tb.id ? "rgba(34,197,94,.25)" : "var(--bdr)"}`, whiteSpace: "nowrap" }}>
+                    {tb.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ position: "absolute", right: 0, top: 0, bottom: 2, width: 48, background: `linear-gradient(to right, transparent, ${theme === "light" ? "#f8fafc" : "#080C14"})`, pointerEvents: "none" }} />
             </div>
 
             {loading && <div style={{ textAlign: "center", padding: 40, color: "var(--t2)" }}>⏳ {lang === "id" ? "Memuat data..." : "Loading..."}</div>}
