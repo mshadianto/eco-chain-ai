@@ -2081,7 +2081,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
 
             {/* Tabs */}
             <div style={{ position: "relative", marginBottom: 16 }}>
-              <div style={{ display: "flex", gap: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: 2 }}>
+              <div style={{ display: "flex", gap: 4, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", paddingBottom: 2, paddingRight: 52 }}>
                 {[
                   { id: "dashboard", label: `📊 ${t("dashboard")}`, show: !!token },
                   { id: "prices", label: `💰 ${t("prices")}`, show: true },
