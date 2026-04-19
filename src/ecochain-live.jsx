@@ -97,6 +97,65 @@ const sb = {
   },
 };
 
+// ─── QUICK HASH (djb2) for cache keys ───
+const quickHash = (str) => {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(36);
+};
+
+// ─── SCAN CACHE (localStorage, 24h TTL) ───
+const SCAN_CACHE_KEY = "eco_scan_cache_v1";
+const SCAN_CACHE_TTL = 24 * 60 * 60 * 1000;
+const scanCacheGet = (key) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(SCAN_CACHE_KEY) || "{}");
+    const hit = all[key];
+    if (!hit) return null;
+    if (Date.now() - hit.ts > SCAN_CACHE_TTL) { delete all[key]; localStorage.setItem(SCAN_CACHE_KEY, JSON.stringify(all)); return null; }
+    return hit.value;
+  } catch { return null; }
+};
+const scanCacheSet = (key, value) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(SCAN_CACHE_KEY) || "{}");
+    all[key] = { ts: Date.now(), value };
+    // Keep last 50 entries
+    const keys = Object.keys(all);
+    if (keys.length > 50) {
+      const sorted = keys.sort((a, b) => all[a].ts - all[b].ts);
+      sorted.slice(0, keys.length - 50).forEach(k => delete all[k]);
+    }
+    localStorage.setItem(SCAN_CACHE_KEY, JSON.stringify(all));
+  } catch { /* quota exceeded — ignore */ }
+};
+
+// ─── WEIGHT CALIBRATION (localStorage, last 50 AI vs actual samples) ───
+const CALIB_KEY = "eco_weight_calib_v1";
+const recordCalibration = (ai, actual) => {
+  if (!(ai > 0) || !(actual > 0)) return;
+  try {
+    const list = JSON.parse(localStorage.getItem(CALIB_KEY) || "[]");
+    list.push({ ai, actual, ts: Date.now() });
+    while (list.length > 50) list.shift();
+    localStorage.setItem(CALIB_KEY, JSON.stringify(list));
+  } catch {}
+};
+const getCalibrationHint = () => {
+  try {
+    const list = JSON.parse(localStorage.getItem(CALIB_KEY) || "[]");
+    if (list.length < 3) return "";
+    const ratios = list.map(e => e.ai / e.actual).filter(r => r > 0 && r < 10);
+    if (ratios.length < 3) return "";
+    const mean = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+    const deviationPct = Math.round(Math.abs(mean - 1) * 100);
+    if (deviationPct < 10) return "";
+    const direction = mean > 1 ? "TERLALU TINGGI (overestimate)" : "TERLALU RENDAH (underestimate)";
+    const correction = mean > 1 ? `kurangi estimasimu sekitar ${deviationPct}%` : `naikkan estimasimu sekitar ${deviationPct}%`;
+    return `\n📊 KALIBRASI DARI HISTORI (${ratios.length} sampel): Estimasi beratmu cenderung ${direction} (rasio rata-rata ${mean.toFixed(2)}×). Tolong ${correction} untuk kompensasi.\n`;
+  } catch { return ""; }
+};
+
 // ─── GEMINI VISION HELPERS ───
 const buildWastePrompt = (prices, photoCount = 1) => {
   const grouped = {};
@@ -116,8 +175,9 @@ const buildWastePrompt = (prices, photoCount = 1) => {
 • Estimasi berat total berdasarkan semua sudut (volume & jumlah sebenarnya).
 `
     : "";
+  const calibHint = getCalibrationHint();
   return `Kamu adalah AI waste sorting expert untuk Bank Sampah di Indonesia.
-Analisis foto${photoCount > 1 ? `-foto (${photoCount} foto)` : ""} ini dan identifikasi SEMUA item sampah yang bisa dijual/didaur ulang.${multiPhotoInstr}
+Analisis foto${photoCount > 1 ? `-foto (${photoCount} foto)` : ""} ini dan identifikasi SEMUA item sampah yang bisa dijual/didaur ulang.${multiPhotoInstr}${calibHint}
 
 PENTING — PANDUAN VISUAL untuk identifikasi akurat:
 • Botol plastik BERSIH (transparan, tanpa label, kering) → kode "Botol Bersih", BUKAN "Mineral Kotor"
@@ -1090,13 +1150,22 @@ export default function EcoChain() {
         }));
         setScanResults({ label: "Demo Scan (tanpa API key)", results: demoItems });
       } else {
-        const prompt = buildWastePrompt(effectivePrices, scanPhotosB64.length);
         const model = hiAccuracy ? GEMINI_MODEL_ACCURATE : GEMINI_MODEL_FAST;
-        const apiRes = await callGeminiVision(scanPhotosB64, prompt, { model });
-        const parsed = parseGeminiResponse(apiRes, effectivePrices);
-        setScanResults(parsed || { label: "Tidak terdeteksi", results: [] });
-        if (parsed?.results?.length) {
-          flash(`✅ ${parsed.results.length} item terdeteksi dari ${scanPhotosB64.length} foto${hiAccuracy ? " (Pro)" : ""}`);
+        const cacheKey = model + "|" + scanPhotosB64.map(quickHash).join(",");
+        const cached = scanCacheGet(cacheKey);
+        if (cached) {
+          setScanResults(cached);
+          flash(`⚡ ${cached.results?.length || 0} item dari cache (gratis, tanpa API)`, "info");
+        } else {
+          const prompt = buildWastePrompt(effectivePrices, scanPhotosB64.length);
+          const apiRes = await callGeminiVision(scanPhotosB64, prompt, { model });
+          const parsed = parseGeminiResponse(apiRes, effectivePrices);
+          const result = parsed || { label: "Tidak terdeteksi", results: [] };
+          setScanResults(result);
+          scanCacheSet(cacheKey, result);
+          if (parsed?.results?.length) {
+            flash(`✅ ${parsed.results.length} item terdeteksi dari ${scanPhotosB64.length} foto${hiAccuracy ? " (Pro)" : ""}`);
+          }
         }
       }
     } catch (err) {
@@ -2815,6 +2884,13 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                       : `${scanPhotos.length} foto siap. Ambil lagi dari sudut lain, lalu klik Analisis.`}
                   </div>
 
+                  {scanPhotos.length > 0 && scanPhotos.length < 3 && (
+                    <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(245,158,11,.08)", border: "1px solid rgba(245,158,11,.2)", borderRadius: 10, fontSize: 10, color: "var(--y)", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 14 }}>💡</span>
+                      <span>Tip: ambil {3 - scanPhotos.length} foto lagi dari sudut berbeda untuk akurasi ~20% lebih tinggi.</span>
+                    </div>
+                  )}
+
                   <label style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, cursor: "pointer", fontSize: 11, color: hiAccuracy ? "var(--p)" : "var(--t2)" }}>
                     <input type="checkbox" checked={hiAccuracy} onChange={e => setHiAccuracy(e.target.checked)} disabled={scanning} style={{ width: "auto", margin: 0 }} />
                     ⚡ High Accuracy (Gemini 2.5 Pro — 20× lebih mahal, untuk kasus ambigu)
@@ -2877,6 +2953,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                             <input type="number" step="0.1" min="0" placeholder={t("actual_weight")}
                               value={weightVerifications[`${i}-${r.code}`]?.actual || ""}
                               onChange={e => setWeightVerifications(v => ({ ...v, [`${i}-${r.code}`]: { ai: r.weight, actual: parseFloat(e.target.value) || 0 } }))}
+                              onBlur={e => { const actual = parseFloat(e.target.value) || 0; if (actual > 0) recordCalibration(r.weight, actual); }}
                               style={{ width: 70, padding: "2px 6px", fontSize: 9, borderRadius: 4, background: "var(--bg2)", border: "1px solid var(--bdr)", color: "var(--w)" }} />
                             {weightVerifications[`${i}-${r.code}`]?.actual > 0 && (() => {
                               const v = weightVerifications[`${i}-${r.code}`];
