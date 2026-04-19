@@ -369,6 +369,17 @@ function AreaChart({ data, width = 320, height = 100, color = "var(--g)" }) {
   );
 }
 
+// ─── PROFILE NORMALIZATION ───
+// Backfills `roles` and `active_role` so older accounts without multi-role
+// columns behave like the single-role `role` column they do have.
+const normalizeProfile = (prof) => {
+  if (!prof) return prof;
+  const legacy = prof.role || "user";
+  const roles = Array.isArray(prof.roles) && prof.roles.length ? prof.roles : [legacy];
+  const active_role = prof.active_role && roles.includes(prof.active_role) ? prof.active_role : legacy;
+  return { ...prof, roles, active_role, role: active_role };
+};
+
 // ─── ONBOARDING STEPS ───
 const ONBOARD_STEPS = [
   { tab: "prices", text_id: "Lihat harga sampah di tab Harga", text_en: "View waste prices in the Prices tab" },
@@ -413,6 +424,7 @@ export default function EcoChain() {
   const t = useCallback((key) => T[lang]?.[key] || T.id[key] || key, [lang]);
   const [showProfile, setShowProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: "", newPassword: "" });
+  const [switching, setSwitching] = useState(false);
   const [expandedTx, setExpandedTx] = useState(null);
   const [txStatusFilter, setTxStatusFilter] = useState("all");
   const [leaderboard, setLeaderboard] = useState([]);
@@ -550,10 +562,11 @@ export default function EcoChain() {
     if (saved) {
       try {
         const s = JSON.parse(saved);
+        const prof = normalizeProfile(s.profile);
         setToken(s.token);
         setUser(s.user);
-        setProfile(s.profile);
-        resolveMyEntity(s.profile, s.token);
+        setProfile(prof);
+        resolveMyEntity(prof, s.token);
       } catch { /* ignore */ }
     }
   }, []);
@@ -561,14 +574,15 @@ export default function EcoChain() {
   // ─── RESOLVE MY ENTITY ───
   const resolveMyEntity = useCallback(async (prof, tk) => {
     if (!prof || !tk) return;
+    const activeRole = prof.active_role || prof.role;
     try {
-      if (prof.role === "bank") {
+      if (activeRole === "bank") {
         const res = await sb.query("bank_sampah", `user_id=eq.${prof.id}`, tk).catch(() => []);
         setMyEntity(res?.[0] || null);
-      } else if (prof.role === "dp") {
+      } else if (activeRole === "dp") {
         const res = await sb.query("drop_points", `user_id=eq.${prof.id}`, tk).catch(() => []);
         setMyEntity(res?.[0] || null);
-      } else if (prof.role === "pelapak") {
+      } else if (activeRole === "pelapak") {
         setMyEntity({ id: prof.id, role: "pelapak" });
       } else {
         setMyEntity(null);
@@ -699,6 +713,7 @@ export default function EcoChain() {
           } catch {
             prof = { id: u.id, email: u.email || authForm.email, name: authForm.name || "User", role: authForm.role || "user" };
           }
+          prof = normalizeProfile(prof);
           setToken(res.access_token);
           setUser(u);
           setProfile(prof);
@@ -729,6 +744,7 @@ export default function EcoChain() {
           // Profile query failed — use fallback from user metadata
           prof = { id: u.id, email: u.email, name: u.user_metadata?.name || u.email?.split("@")[0] || "User", role: u.user_metadata?.role || "user" };
         }
+        prof = normalizeProfile(prof);
         setToken(res.access_token);
         setUser(u);
         setProfile(prof);
@@ -749,6 +765,41 @@ export default function EcoChain() {
     setMyEntity(null); setSelectedDpForPrices(null);
     localStorage.removeItem("eco_session");
     flash("👋 Berhasil keluar.");
+  };
+
+  // ─── ROLE SWITCHER ───
+  const handleSwitchRole = async (newRole) => {
+    if (!profile || newRole === profile.active_role || switching) return;
+    if (!profile.roles?.includes(newRole)) {
+      flash("❌ Role tidak tersedia untuk akun ini.", "err");
+      return;
+    }
+    setSwitching(true);
+    try {
+      const result = await sb.rpc("switch_active_role", { new_active_role: newRole }, token);
+      // Supabase PostgREST returns the error object on failure and the RPC
+      // return value on success — both may be truthy, so only treat objects
+      // carrying a `.message` or `.code` as an error.
+      if (result && (result.code || result.message) && !result.active_role) {
+        throw new Error(result.message || "RPC error");
+      }
+      const updated = { ...profile, active_role: newRole, role: newRole };
+      setProfile(updated);
+      const session = JSON.parse(localStorage.getItem("eco_session") || "{}");
+      session.profile = updated;
+      localStorage.setItem("eco_session", JSON.stringify(session));
+      await resolveMyEntity(updated, token);
+      await loadData(token);
+      const defaultTab = newRole === "user" ? "prices"
+        : newRole === "pelapak" ? "kelola"
+        : "dashboard";
+      setTab(defaultTab);
+      flash(`✅ Switched to ${roleLabel[newRole] || newRole}`);
+    } catch (err) {
+      flash(`❌ Failed to switch role: ${err.message}`, "err");
+    } finally {
+      setSwitching(false);
+    }
   };
 
   // ─── PROFILE HANDLERS ───
@@ -809,9 +860,9 @@ export default function EcoChain() {
   const updateMyMargin = async (newMargin) => {
     if (!myEntity || !profile) return;
     try {
-      if (profile.role === "bank") {
+      if (profile.active_role === "bank") {
         await sb.update("bank_sampah", { id: myEntity.id }, { margin: newMargin }, token);
-      } else if (profile.role === "dp") {
+      } else if (profile.active_role === "dp") {
         await sb.update("drop_points", { id: myEntity.id }, { margin: newMargin }, token);
       }
       setMyEntity(prev => ({ ...prev, margin: newMargin }));
@@ -820,7 +871,7 @@ export default function EcoChain() {
   };
 
   const updateBankPelapak = async (pelapakId) => {
-    if (!myEntity || profile?.role !== "bank") return;
+    if (!myEntity || profile?.active_role !== "bank") return;
     try {
       await sb.update("bank_sampah", { id: myEntity.id }, { pelapak_id: pelapakId || null }, token);
       setMyEntity(prev => ({ ...prev, pelapak_id: pelapakId || null }));
@@ -829,7 +880,7 @@ export default function EcoChain() {
   };
 
   const updateDpBank = async (bankId) => {
-    if (!myEntity || profile?.role !== "dp") return;
+    if (!myEntity || profile?.active_role !== "dp") return;
     try {
       await sb.update("drop_points", { id: myEntity.id }, { bank_sampah_id: bankId ? parseInt(bankId) : null }, token);
       setMyEntity(prev => ({ ...prev, bank_sampah_id: bankId ? parseInt(bankId) : null }));
@@ -973,16 +1024,16 @@ export default function EcoChain() {
       ...extra,
     });
 
-    if (profile?.role === "pelapak") {
+    if (profile?.active_role === "pelapak") {
       return pelapakPrices.filter(p => p.pelapak_id === user?.id).map(p => normalize(p));
     }
-    if (profile?.role === "bank" && myEntity?.pelapak_id) {
+    if (profile?.active_role === "bank" && myEntity?.pelapak_id) {
       const margin = Number(myEntity.margin) || 0;
       return pelapakPrices
         .filter(p => p.pelapak_id === myEntity.pelapak_id)
         .map(p => normalize(p, { bank_price: Number(p.price_per_kg) * (1 - margin) }));
     }
-    if (profile?.role === "dp" && myEntity?.bank_sampah_id) {
+    if (profile?.active_role === "dp" && myEntity?.bank_sampah_id) {
       const bs = bankSampah.find(b => b.id === myEntity.bank_sampah_id);
       if (bs?.pelapak_id) {
       const bankMargin = Number(bs.margin) || 0;
@@ -1264,9 +1315,9 @@ export default function EcoChain() {
 
   // ─── INVENTORY STATS (for DP/Bank) ───
   const inventoryStats = useMemo(() => {
-    if (!myEntity || !["dp", "bank"].includes(profile?.role)) return null;
+    if (!myEntity || !["dp", "bank"].includes(profile?.active_role)) return null;
     const catBreakdown = {};
-    const myTx = transactions.filter(tx => tx.status === "done" && (profile.role === "dp" ? tx.drop_point_id === String(myEntity.id) : true));
+    const myTx = transactions.filter(tx => tx.status === "done" && (profile.active_role === "dp" ? tx.drop_point_id === String(myEntity.id) : true));
     for (const tx of myTx) {
       for (const it of txItems.filter(i => i.transaction_id === tx.id)) {
         if (!catBreakdown[it.waste_code]) catBreakdown[it.waste_code] = { name: it.waste_name, weight: 0, count: 0 };
@@ -1284,8 +1335,8 @@ export default function EcoChain() {
     const items = txItems.filter(i => i.transaction_id === txId);
     return items.reduce((sum, it) => {
       const p = effectivePrices.find(pr => pr.item_code === it.waste_code);
-      const price = profile?.role === "pelapak" ? (p?.pelapak_price || 0)
-        : profile?.role === "bank" ? (p?.bank_price || 0)
+      const price = profile?.active_role === "pelapak" ? (p?.pelapak_price || 0)
+        : profile?.active_role === "bank" ? (p?.bank_price || 0)
           : (p?.dp_price || p?.pelapak_price || 0);
       return sum + price * Number(it.weight_kg);
     }, 0);
@@ -1468,7 +1519,7 @@ export default function EcoChain() {
   const postAnnouncement = async () => {
     if (!annForm.title.trim() || !annForm.content.trim()) return;
     try {
-      await sb.insert("announcements", { author_id: user.id, author_name: profile.name, author_role: profile.role, title: annForm.title.trim(), content: annForm.content.trim() }, token);
+      await sb.insert("announcements", { author_id: user.id, author_name: profile.name, author_role: profile.active_role, title: annForm.title.trim(), content: annForm.content.trim() }, token);
       flash(t("ann_posted"));
       setAnnForm({ title: "", content: "" });
       setShowAnnForm(false);
@@ -1577,7 +1628,7 @@ export default function EcoChain() {
     ctx.fillStyle = "#F1F5F9"; ctx.font = "bold 22px sans-serif";
     ctx.fillText(profile?.name || "User", 350, 100);
     ctx.fillStyle = "#94A3B8"; ctx.font = "14px sans-serif";
-    ctx.fillText(`${roleLabel[profile?.role]} • ${profile?.email || ""}`, 350, 125);
+    ctx.fillText(`${roleLabel[profile?.active_role]} • ${profile?.email || ""}`, 350, 125);
     // Stats
     ctx.fillStyle = "#22C55E"; ctx.font = "bold 40px sans-serif";
     ctx.fillText(`${envImpact.totalWeight} kg`, 350, 185);
@@ -1913,7 +1964,36 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 <button className="bt" onClick={requestNotifPermission} style={{ padding: "4px 8px", background: "rgba(34,197,94,.06)", color: "var(--g)", fontSize: 9, border: "1px solid rgba(34,197,94,.15)" }}>🔕</button>
               )}
               {notifPermission === "granted" && <span style={{ fontSize: 8, color: "var(--g)" }}>●</span>}
-              <Badge color={roleColor[profile.role]}>{roleIcon[profile.role]} {roleLabel[profile.role]}</Badge>
+              {profile.roles && profile.roles.length > 1 ? (
+                <div title={switching ? "Switching role..." : "Switch active role"} style={{ display: "flex", gap: 3, padding: 3, background: "rgba(255,255,255,.03)", borderRadius: 10, border: "1px solid var(--bdr)", opacity: switching ? 0.6 : 1 }}>
+                  {profile.roles.map(r => {
+                    const isActive = profile.active_role === r;
+                    return (
+                      <button
+                        key={r}
+                        className="bt"
+                        onClick={() => handleSwitchRole(r)}
+                        disabled={isActive || switching}
+                        title={roleLabel[r]}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          background: isActive ? `${roleColor[r]}20` : "transparent",
+                          color: isActive ? roleColor[r] : "var(--t2)",
+                          border: `1px solid ${isActive ? `${roleColor[r]}35` : "transparent"}`,
+                          cursor: isActive ? "default" : (switching ? "wait" : "pointer"),
+                        }}
+                      >
+                        {roleIcon[r]}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Badge color={roleColor[profile.active_role]}>{roleIcon[profile.active_role]} {roleLabel[profile.active_role]}</Badge>
+              )}
+              {switching && <span style={{ fontSize: 10, color: "var(--y)", fontFamily: "var(--m)", animation: "pulse 1s infinite" }}>⏳</span>}
               <span onClick={openProfile} style={{ fontSize: 12, color: "var(--w)", fontWeight: 600, cursor: "pointer" }}>{profile.name}</span>
               <button className="bt" onClick={logout} style={{ padding: "6px 14px", background: "rgba(239,68,68,.12)", color: "var(--r)", fontSize: 11, fontWeight: 600, border: "1px solid rgba(239,68,68,.2)" }}>{t("logout")}</button>
             </>) : (
@@ -2067,10 +2147,18 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
           /* ═══ LOGGED IN ═══ */
           <div className="fu">
             {/* Role Banner */}
-            <div style={{ padding: "16px 20px", borderRadius: 14, marginBottom: 18, background: `${roleColor[profile.role]}08`, border: `1px solid ${roleColor[profile.role]}20`, display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 30 }}>{roleIcon[profile.role]}</div>
+            <div style={{ padding: "16px 20px", borderRadius: 14, marginBottom: 18, background: `${roleColor[profile.active_role]}08`, border: `1px solid ${roleColor[profile.active_role]}20`, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 30 }}>{roleIcon[profile.active_role]}</div>
               <div>
-                <h2 style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>{profile.name} <span style={{ fontSize: 12, fontWeight: 400, color: "var(--t2)" }}>— {roleLabel[profile.role]}</span></h2>
+                <h2 style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>
+                  {profile.name} <span style={{ fontSize: 12, fontWeight: 400, color: "var(--t2)" }}>— {roleLabel[profile.active_role]}</span>
+                  {profile.roles && profile.roles.length > 1 && (
+                    <span style={{ fontSize: 10, fontWeight: 500, color: "var(--t2)", fontFamily: "var(--m)", marginLeft: 8 }}>({profile.roles.length} roles)</span>
+                  )}
+                  {profile.roles?.length === 4 && (
+                    <span className="pl" style={{ marginLeft: 8, background: "linear-gradient(135deg, var(--g), var(--p))", color: "#000", fontWeight: 700, fontSize: 9 }}>⭐ Multi-Role Admin</span>
+                  )}
+                </h2>
                 <p style={{ fontSize: 11, color: "var(--t2)" }}>{profile.email}</p>
               </div>
               <div style={{ marginLeft: "auto", textAlign: "right" }}>
@@ -2084,14 +2172,14 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
               {[
                 { id: "dashboard", label: `📊 ${t("dashboard")}`, show: !!token },
                 { id: "prices", label: `💰 ${t("prices")}`, show: true },
-                { id: "scan", label: `📷 ${t("scan")}`, show: profile.role === "user" },
+                { id: "scan", label: `📷 ${t("scan")}`, show: profile.active_role === "user" },
                 { id: "chat", label: `🤖 ${t("chat")}`, show: true },
                 { id: "map", label: `🗺️ ${t("map")}`, show: true },
                 { id: "tx", label: `📋 ${t("tx")}`, show: !!token },
                 { id: "reports", label: `📄 ${t("reports")}`, show: !!token },
-                { id: "newtx", label: `➕ ${t("newtx")}`, show: ["dp", "bank"].includes(profile.role) },
-                { id: "kelola", label: `📦 ${t("kelola")}`, show: profile.role === "pelapak" },
-                { id: "settings", label: `⚙️ ${t("settings")}`, show: ["bank", "dp"].includes(profile.role) },
+                { id: "newtx", label: `➕ ${t("newtx")}`, show: ["dp", "bank"].includes(profile.active_role) },
+                { id: "kelola", label: `📦 ${t("kelola")}`, show: profile.active_role === "pelapak" },
+                { id: "settings", label: `⚙️ ${t("settings")}`, show: ["bank", "dp"].includes(profile.active_role) },
                 { id: "pickup", label: `🚛 ${t("pickup")}`, show: !!token },
                 { id: "wallet", label: `💳 ${t("wallet")}`, show: !!token },
                 { id: "marketplace", label: `🛒 ${t("marketplace")}`, show: !!token },
@@ -2404,7 +2492,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             {!loading && tab === "prices" && (
               <div className="fu">
                 {/* DP selector for end users */}
-                {(profile.role === "user") && (
+                {(profile.active_role === "user") && (
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>Pilih Drop Point untuk lihat harga:</label>
                     <select value={selectedDpForPrices || ""} onChange={e => setSelectedDpForPrices(e.target.value || null)}>
@@ -2451,27 +2539,27 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
 
                 <div className="c" style={{ overflow: "hidden" }}>
                   {/* Header row — varies by role */}
-                  {profile.role === "pelapak" && (
+                  {profile.active_role === "pelapak" && (
                     <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
                       <span>ITEM</span>
                       <span style={{ textAlign: "right", color: "var(--p)" }}>🏭 HARGA</span>
                     </div>
                   )}
-                  {profile.role === "bank" && (
+                  {profile.active_role === "bank" && (
                     <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
                       <span>ITEM</span>
                       <span style={{ textAlign: "right", color: "var(--p)" }}>🏭 PELAPAK</span>
                       <span style={{ textAlign: "right", color: "var(--b)" }}>🏦 BANK</span>
                     </div>
                   )}
-                  {profile.role === "dp" && (
+                  {profile.active_role === "dp" && (
                     <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
                       <span>ITEM</span>
                       <span style={{ textAlign: "right", color: "var(--b)" }}>🏦 BANK</span>
                       <span style={{ textAlign: "right", color: "var(--y)" }}>📍 DP</span>
                     </div>
                   )}
-                  {profile.role === "user" && (
+                  {profile.active_role === "user" && (
                     <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 0.3fr", padding: "8px 16px", background: "rgba(255,255,255,.02)", fontSize: 9, fontFamily: "var(--m)", color: "var(--t2)", fontWeight: 700, letterSpacing: .5 }}>
                       <span>ITEM</span>
                       <span style={{ textAlign: "right", color: "var(--y)" }}>📍 HARGA</span>
@@ -2480,20 +2568,20 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                   )}
                   {/* Data rows */}
                   {filteredPrices.map((p, i) => (
-                    <div key={p.item_code} style={{ display: "grid", gridTemplateColumns: profile.role === "pelapak" ? "3fr 1fr" : profile.role === "user" ? "3fr 1fr 0.3fr" : "2.5fr 1fr 1fr", padding: "8px 16px", borderTop: "1px solid var(--bdr)", fontSize: 11, alignItems: "center" }}>
+                    <div key={p.item_code} style={{ display: "grid", gridTemplateColumns: profile.active_role === "pelapak" ? "3fr 1fr" : profile.active_role === "user" ? "3fr 1fr 0.3fr" : "2.5fr 1fr 1fr", padding: "8px 16px", borderTop: "1px solid var(--bdr)", fontSize: 11, alignItems: "center" }}>
                       <span><span style={{ fontFamily: "var(--m)", fontSize: 9, color: "var(--t2)", marginRight: 6 }}>{p.item_code}</span><span style={{ color: "var(--w)" }}>{p.name}</span>{p.unit !== "kg" && <span style={{ fontSize: 8, color: "var(--t2)", marginLeft: 4 }}>/{p.unit}</span>}{priceTrends[p.item_code]?.dir === "up" && <span style={{ fontSize: 8, color: "var(--g)", marginLeft: 4 }}>↑{priceTrends[p.item_code].pct}%</span>}{priceTrends[p.item_code]?.dir === "down" && <span style={{ fontSize: 8, color: "var(--r)", marginLeft: 4 }}>↓{Math.abs(priceTrends[p.item_code].pct)}%</span>}{(priceTrends[p.item_code]?.demand || 0) > 10 && <span style={{ fontSize: 7, background: "rgba(239,68,68,.1)", color: "var(--r)", padding: "1px 4px", borderRadius: 4, marginLeft: 4 }}>🔥</span>}</span>
-                      {profile.role === "pelapak" && (
+                      {profile.active_role === "pelapak" && (
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--p)" }}>{rp(p.pelapak_price)}</span>
                       )}
-                      {profile.role === "bank" && (<>
+                      {profile.active_role === "bank" && (<>
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--p)" }}>{rp(p.pelapak_price)}</span>
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--b)" }}>{rp(p.bank_price)}</span>
                       </>)}
-                      {profile.role === "dp" && (<>
+                      {profile.active_role === "dp" && (<>
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--b)" }}>{rp(p.bank_price)}</span>
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--y)" }}>{rp(p.dp_price)}</span>
                       </>)}
-                      {profile.role === "user" && (<>
+                      {profile.active_role === "user" && (<>
                         <span style={{ textAlign: "right", fontFamily: "var(--m)", fontWeight: 600, color: "var(--y)" }}>{rp(p.dp_price || p.pelapak_price)}</span>
                         <button className="bt" onClick={() => toggleWatch(p.item_code)} style={{ padding: "2px 6px", fontSize: 9, background: watchedItems.includes(p.item_code) ? "rgba(245,158,11,.12)" : "rgba(255,255,255,.03)", color: watchedItems.includes(p.item_code) ? "var(--y)" : "var(--t2)", border: `1px solid ${watchedItems.includes(p.item_code) ? "rgba(245,158,11,.2)" : "var(--bdr)"}` }}>
                           {watchedItems.includes(p.item_code) ? "🔔" : "🔕"}
@@ -2830,7 +2918,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                           <span style={{ fontFamily: "var(--m)", fontSize: 11, fontWeight: 600, color: "var(--w)" }}>{tx.id}</span>
                           <Badge color={statusColor[tx.status] || "var(--t2)"}>{statusLabel[tx.status] || tx.status}</Badge>
                         </div>
-                        <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: roleColor[profile.role], fontSize: 13 }}>{rp(total)}</span>
+                        <span style={{ fontFamily: "var(--m)", fontWeight: 700, color: roleColor[profile.active_role], fontSize: 13 }}>{rp(total)}</span>
                       </div>
                       <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 3 }}>
                         👤 {tx.user_name} → 📍 {tx.drop_point_id} • {new Date(tx.created_at).toLocaleDateString("id-ID")}
@@ -2878,7 +2966,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                             <div style={{ fontSize: 9, color: "var(--t2)", fontFamily: "var(--m)", marginTop: 4 }}>{tx.id}</div>
                           </div>
                           {/* Action buttons */}
-                          {["dp", "bank"].includes(profile.role) && tx.status !== "done" && tx.status !== "cancelled" && (
+                          {["dp", "bank"].includes(profile.active_role) && tx.status !== "done" && tx.status !== "cancelled" && (
                             <div style={{ marginTop: 10, display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
                               {tx.status === "pending" && (
                                 <button className="bt" onClick={() => updateTxStatus(tx.id, "pickup")} style={{ padding: "6px 14px", background: "rgba(6,182,212,.12)", color: "var(--c)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(6,182,212,.2)" }}>🚛 {t("pickup_s")}</button>
@@ -2893,7 +2981,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                           {tx.status === "done" && (
                             <div style={{ marginTop: 10, display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
                               <button className="bt" onClick={() => printInvoice(tx.id)} style={{ padding: "6px 14px", background: "rgba(59,130,246,.08)", color: "var(--b)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(59,130,246,.15)" }}>🖨️ {t("print_invoice")}</button>
-                              {profile.role === "user" && !reviews.find(r => r.transaction_id === tx.id) && (
+                              {profile.active_role === "user" && !reviews.find(r => r.transaction_id === tx.id) && (
                                 <button className="bt" onClick={() => { setReviewForm({ txId: tx.id, rating: 0, comment: "" }); setShowReviewModal(true); }} style={{ padding: "6px 14px", background: "rgba(245,158,11,.08)", color: "var(--y)", fontSize: 10, fontWeight: 600, border: "1px solid rgba(245,158,11,.15)" }}>⭐ {t("rate")}</button>
                               )}
                               {reviews.find(r => r.transaction_id === tx.id) && (
@@ -3018,7 +3106,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 </div>
 
                 {/* ── Bulk Transaction (DP/Bank only) ── */}
-                {["dp", "bank"].includes(profile.role) && (
+                {["dp", "bank"].includes(profile.active_role) && (
                   <div style={{ marginTop: 16 }}>
                     <button className="bt" onClick={() => setShowBulkTx(!showBulkTx)}
                       style={{ width: "100%", padding: "10px 16px", fontSize: 12, fontWeight: 600, background: showBulkTx ? "rgba(139,92,246,.1)" : "rgba(255,255,255,.03)", color: showBulkTx ? "var(--p)" : "var(--t2)", border: `1px solid ${showBulkTx ? "rgba(139,92,246,.25)" : "var(--bdr)"}` }}>
@@ -3072,7 +3160,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             )}
 
             {/* ═── KELOLA HARGA TAB (Pelapak) ──═ */}
-            {!loading && tab === "kelola" && profile.role === "pelapak" && (
+            {!loading && tab === "kelola" && profile.active_role === "pelapak" && (
               <div className="fu">
                 <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 14 }}>📦 Kelola Harga Pelapak</h3>
 
@@ -3129,20 +3217,20 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             )}
 
             {/* ═── SETTINGS TAB (Bank Sampah & Drop Point) ──═ */}
-            {!loading && tab === "settings" && ["bank", "dp"].includes(profile.role) && (
+            {!loading && tab === "settings" && ["bank", "dp"].includes(profile.active_role) && (
               <div className="fu">
-                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 14 }}>⚙️ Pengaturan {profile.role === "bank" ? "Bank Sampah" : "Drop Point"}</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 14 }}>⚙️ Pengaturan {profile.active_role === "bank" ? "Bank Sampah" : "Drop Point"}</h3>
 
                 {!myEntity && (
                   <div className="c" style={{ padding: 20, background: "rgba(239,68,68,.06)", border: "1px solid rgba(239,68,68,.15)" }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--r)", marginBottom: 4 }}>Akun belum terhubung</div>
                     <div style={{ fontSize: 11, color: "var(--t2)" }}>
-                      Akun Anda belum terhubung dengan {profile.role === "bank" ? "Bank Sampah" : "Drop Point"} manapun. Hubungi admin untuk menghubungkan akun Anda.
+                      Akun Anda belum terhubung dengan {profile.active_role === "bank" ? "Bank Sampah" : "Drop Point"} manapun. Hubungi admin untuk menghubungkan akun Anda.
                     </div>
                   </div>
                 )}
 
-                {myEntity && profile.role === "bank" && (
+                {myEntity && profile.active_role === "bank" && (
                   <div className="c" style={{ padding: 22 }}>
                     {/* Pelapak selector */}
                     <div style={{ marginBottom: 16 }}>
@@ -3189,7 +3277,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                   </div>
                 )}
 
-                {myEntity && profile.role === "dp" && (
+                {myEntity && profile.active_role === "dp" && (
                   <div className="c" style={{ padding: 22 }}>
                     {/* Bank Sampah selector */}
                     <div style={{ marginBottom: 16 }}>
@@ -3274,7 +3362,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
               <div className="fu">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>🚛 {t("pickup")}</h3>
-                  {profile.role === "user" && (
+                  {profile.active_role === "user" && (
                     <button className="bt" onClick={() => setPickupTab(pickupTab === "request" ? "list" : "request")}
                       style={{ padding: "4px 10px", fontSize: 10, background: pickupTab === "request" ? "rgba(34,197,94,.1)" : "transparent", color: pickupTab === "request" ? "var(--g)" : "var(--t2)", border: `1px solid ${pickupTab === "request" ? "rgba(34,197,94,.25)" : "var(--bdr)"}` }}>
                       {pickupTab === "request" ? `📋 ${lang === "id" ? "Lihat Daftar" : "View List"}` : `➕ ${t("request_pickup")}`}
@@ -3338,7 +3426,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 </div>
 
                 {/* User request pickup form */}
-                {profile.role === "user" && pickupTab === "request" && (
+                {profile.active_role === "user" && pickupTab === "request" && (
                   <div className="c" style={{ padding: 18, marginBottom: 14 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)", marginBottom: 10 }}>📋 {t("request_pickup")}</div>
                     <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
@@ -3376,7 +3464,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                         {pk.notes && <span style={{ marginLeft: 6, fontStyle: "italic" }}>• {pk.notes}</span>}
                       </div>
                       {/* Operator actions */}
-                      {["dp", "bank"].includes(profile.role) && !["completed", "cancelled"].includes(pk.status) && (
+                      {["dp", "bank"].includes(profile.active_role) && !["completed", "cancelled"].includes(pk.status) && (
                         <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
                           {pk.status === "requested" && <button className="bt" onClick={() => updatePickupStatus(pk.id, "scheduled")} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(6,182,212,.08)", color: "var(--c)", border: "1px solid rgba(6,182,212,.15)" }}>📅 {t("schedule_pickup")}</button>}
                           {pk.status === "scheduled" && <button className="bt" onClick={() => updatePickupStatus(pk.id, "in_progress")} style={{ padding: "4px 10px", fontSize: 10, background: "rgba(59,130,246,.08)", color: "var(--b)", border: "1px solid rgba(59,130,246,.15)" }}>🚛 {t("start_pickup")}</button>}
@@ -3455,7 +3543,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 })()}
 
                 {/* Audit Trail */}
-                {["dp", "bank", "pelapak"].includes(profile.role) && auditLogs.length > 0 && (
+                {["dp", "bank", "pelapak"].includes(profile.active_role) && auditLogs.length > 0 && (
                   <div style={{ marginTop: 16 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)", marginBottom: 8 }}>📋 {t("audit_trail")}</div>
                     <div className="c" style={{ overflow: "hidden" }}>
@@ -3486,7 +3574,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                           </div>
                           <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 2 }}>{d.reason}</div>
                           {d.resolution && <div style={{ fontSize: 10, color: "var(--g)", marginTop: 2 }}>✓ {d.resolution}</div>}
-                          {["dp", "bank"].includes(profile.role) && d.status === "open" && (
+                          {["dp", "bank"].includes(profile.active_role) && d.status === "open" && (
                             <button className="bt" onClick={() => resolveDispute(d.id, lang === "id" ? "Diselesaikan oleh operator" : "Resolved by operator")}
                               style={{ padding: "4px 10px", fontSize: 9, marginTop: 4, background: "rgba(34,197,94,.08)", color: "var(--g)", border: "1px solid rgba(34,197,94,.15)" }}>✓ {t("resolution")}</button>
                           )}
@@ -3553,7 +3641,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 </div>
 
                 {/* Add product form (for sellers) */}
-                {["pelapak", "bank"].includes(profile.role) && (
+                {["pelapak", "bank"].includes(profile.active_role) && (
                   <div className="c" style={{ padding: 18, marginBottom: 14 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--w)", marginBottom: 10 }}>➕ {t("list_product")}</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
@@ -3608,7 +3696,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 <div style={{ marginBottom: 18 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--y)" }}>📢 {t("announcements")}</div>
-                    {["dp", "bank", "pelapak"].includes(profile.role) && (
+                    {["dp", "bank", "pelapak"].includes(profile.active_role) && (
                       <button className="bt" onClick={() => setShowAnnForm(!showAnnForm)}
                         style={{ padding: "4px 10px", fontSize: 10, background: "rgba(245,158,11,.08)", color: "var(--y)", border: "1px solid rgba(245,158,11,.15)" }}>
                         {showAnnForm ? "✕" : "+"} {t("post_announcement")}
@@ -3710,12 +3798,12 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
         <div style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setShowProfile(false)}>
           <div className="c fu" style={{ padding: 28, maxWidth: 400, width: "90%", background: "var(--bg3)" }} onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg,${roleColor[profile.role]},${roleColor[profile.role]}88)`, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "#fff", fontFamily: "var(--d)" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg,${roleColor[profile.active_role]},${roleColor[profile.active_role]}88)`, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "#fff", fontFamily: "var(--d)" }}>
                 {(profile.name || "?")[0].toUpperCase()}
               </div>
               <div style={{ marginTop: 8, fontSize: 14, fontWeight: 700, color: "var(--w)", fontFamily: "var(--d)" }}>{profile.name}</div>
               <div style={{ fontSize: 11, color: "var(--t2)" }}>{profile.email}</div>
-              <Badge color={roleColor[profile.role]}>{roleIcon[profile.role]} {roleLabel[profile.role]}</Badge>
+              <Badge color={roleColor[profile.active_role]}>{roleIcon[profile.active_role]} {roleLabel[profile.active_role]}</Badge>
             </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>{t("name")}</label>
