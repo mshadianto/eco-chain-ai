@@ -2821,6 +2821,86 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                     )}
                   </div>
                 )}
+
+                {/* ─── Keranjang & Submit Transaksi (user role) ─── */}
+                <div className="c fu" style={{ padding: 18, marginTop: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <h4 style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)" }}>🛒 Keranjang & Submit Transaksi</h4>
+                    <Badge color="var(--c)">{txForm.items.filter(i => i.code && i.weight).length} item</Badge>
+                  </div>
+                  <p style={{ fontSize: 10, color: "var(--t2)", marginBottom: 12 }}>Anda bisa mengimpor hasil scan di atas, atau mengisi jenis & berat barang secara manual.</p>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 10, color: "var(--t2)", marginBottom: 4, display: "block" }}>📍 Drop Point Tujuan</label>
+                    <select value={txForm.dp || ""} onChange={e => { const v = e.target.value; setTxForm(f => ({ ...f, dp: v })); setSelectedDpForPrices(v || null); }}>
+                      <option value="">-- Pilih Drop Point --</option>
+                      {dropPoints.filter(d => d.bank_sampah_id).map(dp => <option key={dp.id} value={dp.id}>{dp.name}</option>)}
+                    </select>
+                    {!txForm.dp && <div style={{ fontSize: 9, color: "var(--y)", marginTop: 4 }}>Pilih DP dulu agar daftar harga muncul.</div>}
+                  </div>
+
+                  {scanResults?.results?.length > 0 && (
+                    <button type="button" className="bt" onClick={() => {
+                      const imported = scanResults.results.filter(r => r.code).map(r => ({ code: r.code, weight: String(r.weight || "") }));
+                      setTxForm(f => ({ ...f, items: imported.length ? imported : f.items }));
+                      flash(`📥 ${imported.length} item diimpor dari hasil scan`);
+                    }} style={{ width: "100%", padding: "9px", fontSize: 11, fontWeight: 600, background: "rgba(6,182,212,.1)", color: "var(--c)", border: "1px solid rgba(6,182,212,.25)", marginBottom: 12 }}>
+                      📥 Impor {scanResults.results.length} item dari hasil scan
+                    </button>
+                  )}
+
+                  {txForm.items.map((item, i) => {
+                    const p = effectivePrices.find(pr => pr.item_code === item.code);
+                    const subtotal = p && item.weight ? (p.dp_price || p.pelapak_price || 0) * parseFloat(item.weight || 0) : 0;
+                    return (
+                      <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
+                        <select value={item.code} onChange={e => setTxForm(f => ({ ...f, items: f.items.map((it, idx) => idx === i ? { ...it, code: e.target.value } : it) }))} style={{ flex: 2 }}>
+                          <option value="">-- Jenis sampah --</option>
+                          {effectivePrices.map(pr => <option key={pr.item_code} value={pr.item_code}>{pr.name} ({rp(pr.dp_price || pr.pelapak_price || 0)}/{pr.unit || "kg"})</option>)}
+                        </select>
+                        <input type="number" step="0.1" min="0" placeholder="kg" value={item.weight}
+                          onChange={e => setTxForm(f => ({ ...f, items: f.items.map((it, idx) => idx === i ? { ...it, weight: e.target.value } : it) }))}
+                          style={{ width: 80 }} />
+                        <div style={{ width: 90, textAlign: "right", fontSize: 10, fontFamily: "var(--m)", fontWeight: 700, color: "var(--g)" }}>{subtotal ? rp(subtotal) : "—"}</div>
+                        {txForm.items.length > 1 && (
+                          <button type="button" onClick={() => setTxForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }))}
+                            style={{ background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)", color: "var(--r)", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 11 }}>✕</button>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <button type="button" className="bt" onClick={() => setTxForm(f => ({ ...f, items: [...f.items, { code: "", weight: "" }] }))}
+                    style={{ width: "100%", padding: "9px", fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,.03)", color: "var(--t2)", border: "1px dashed var(--bdr2)", marginTop: 4 }}>
+                    ➕ Tambah Item Manual
+                  </button>
+
+                  {(() => {
+                    const validItems = txForm.items.filter(i => i.code && i.weight);
+                    const totalKg = validItems.reduce((s, it) => s + parseFloat(it.weight || 0), 0);
+                    const totalRp = validItems.reduce((s, it) => {
+                      const p = effectivePrices.find(pr => pr.item_code === it.code);
+                      return s + (p?.dp_price || p?.pelapak_price || 0) * parseFloat(it.weight || 0);
+                    }, 0);
+                    const canSubmit = !!txForm.dp && validItems.length > 0;
+                    return (
+                      <>
+                        <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(34,197,94,.06)", border: "1px solid rgba(34,197,94,.15)", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: 9, color: "var(--t2)" }}>Estimasi Total</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "var(--d)", color: "var(--g)" }}>{rp(totalRp)}</div>
+                          </div>
+                          <div style={{ fontSize: 10, color: "var(--t2)", fontFamily: "var(--m)" }}>{totalKg.toFixed(2)} kg</div>
+                        </div>
+                        <button type="button" className="bt" disabled={!canSubmit} onClick={submitTx}
+                          style={{ width: "100%", padding: "12px", marginTop: 10, fontSize: 13, fontWeight: 700, background: canSubmit ? "linear-gradient(135deg,#22C55E,#16A34A)" : "rgba(255,255,255,.04)", color: canSubmit ? "#fff" : "var(--t2)", border: "none", opacity: canSubmit ? 1 : 0.6, cursor: canSubmit ? "pointer" : "not-allowed" }}>
+                          ✅ Submit Transaksi
+                        </button>
+                        {!canSubmit && <div style={{ fontSize: 9, color: "var(--t2)", textAlign: "center", marginTop: 6 }}>Pilih Drop Point & minimal satu item dengan jenis + berat.</div>}
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             )}
 
