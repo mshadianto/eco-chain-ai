@@ -13,8 +13,9 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // ─── GEMINI VISION AI CONFIG ───
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_KEY || "";
-const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_MODEL_FAST = "gemini-2.5-flash";
+const GEMINI_MODEL_ACCURATE = "gemini-2.5-pro";
+const geminiUrl = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
 // ─── GROQ CHAT AI CONFIG ───
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_KEY || "";
@@ -95,7 +96,7 @@ const sb = {
 };
 
 // ─── GEMINI VISION HELPERS ───
-const buildWastePrompt = (prices) => {
+const buildWastePrompt = (prices, photoCount = 1) => {
   const grouped = {};
   for (const p of prices) {
     if (!grouped[p.category]) grouped[p.category] = [];
@@ -105,8 +106,16 @@ const buildWastePrompt = (prices) => {
   for (const [cat, items] of Object.entries(grouped)) {
     codes += `${cat.toUpperCase()}: ${items.join(", ")}\n`;
   }
+  const multiPhotoInstr = photoCount > 1
+    ? `\n🎯 KAMU DIBERI ${photoCount} FOTO dari tumpukan sampah YANG SAMA, diambil dari sudut berbeda.
+• Gabungkan (FUSE) informasi dari semua foto untuk identifikasi yang lebih akurat.
+• JANGAN hitung item ganda hanya karena muncul di beberapa foto — hitung unik.
+• Jika item hanya terlihat di 1 foto, tetap masukkan. Jika ada di beberapa foto, gunakan sudut terbaik untuk menentukan jenis.
+• Estimasi berat total berdasarkan semua sudut (volume & jumlah sebenarnya).
+`
+    : "";
   return `Kamu adalah AI waste sorting expert untuk Bank Sampah di Indonesia.
-Analisis foto ini dan identifikasi SEMUA item sampah yang bisa dijual/didaur ulang.
+Analisis foto${photoCount > 1 ? `-foto (${photoCount} foto)` : ""} ini dan identifikasi SEMUA item sampah yang bisa dijual/didaur ulang.${multiPhotoInstr}
 
 PENTING — PANDUAN VISUAL untuk identifikasi akurat:
 • Botol plastik BERSIH (transparan, tanpa label, kering) → kode "Botol Bersih", BUKAN "Mineral Kotor"
@@ -169,19 +178,30 @@ const resizeAndEncode = (file) => new Promise((resolve, reject) => {
   img.src = URL.createObjectURL(file);
 });
 
-const callGeminiVision = async (base64, prompt) => {
-  const res = await fetch(GEMINI_URL, {
+const callGeminiVision = async (images, prompt, { model = GEMINI_MODEL_FAST } = {}) => {
+  const imgs = Array.isArray(images) ? images : [images];
+  const parts = [];
+  imgs.forEach((b64, i) => {
+    if (imgs.length > 1) parts.push({ text: `[Foto ${i + 1} dari ${imgs.length}]` });
+    parts.push({ inline_data: { mime_type: "image/jpeg", data: b64 } });
+  });
+  parts.push({ text: prompt });
+  const res = await fetch(geminiUrl(model), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{ parts: [
-        { inline_data: { mime_type: "image/jpeg", data: base64 } },
-        { text: prompt },
-      ]}],
-      generationConfig: { temperature: 0.15, maxOutputTokens: 2048, responseMimeType: "application/json" },
+      contents: [{ parts }],
+      generationConfig: {
+        temperature: model === GEMINI_MODEL_ACCURATE ? 0.1 : 0.15,
+        maxOutputTokens: model === GEMINI_MODEL_ACCURATE ? 4096 : 2048,
+        responseMimeType: "application/json",
+      },
     }),
   });
-  if (!res.ok) throw new Error(`Gemini API ${res.status}`);
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Gemini ${model} ${res.status}${errText ? ": " + errText.slice(0, 200) : ""}`);
+  }
   return res.json();
 };
 
@@ -481,6 +501,8 @@ export default function EcoChain() {
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [scanPhotos, setScanPhotos] = useState([]);
+  const [scanPhotosB64, setScanPhotosB64] = useState([]);
+  const [hiAccuracy, setHiAccuracy] = useState(false);
   const [areaFilter, setAreaFilter] = useState("all");
   const [showInventory, setShowInventory] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
@@ -1017,18 +1039,47 @@ export default function EcoChain() {
     } catch (e) { flash(`❌ ${e.message}`, "err"); }
   };
 
-  // ─── SCAN HANDLER (V2: multi-photo + confidence) ───
+  // ─── ADD PHOTO TO GALLERY (no auto-analyze) ───
   const handleImageCapture = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setScanResults(null);
-    setScanning(true);
     try {
       const { base64, preview } = await resizeAndEncode(file);
       setScanPhoto(preview);
-      setScanPhotos(prev => [...prev, preview].slice(-5)); // Keep last 5 photos
+      setScanPhotos(prev => [...prev, preview].slice(-5));
+      setScanPhotosB64(prev => [...prev, base64].slice(-5));
+      setScanResults(null); // clear previous results on new photo
+    } catch (err) {
+      flash(`❌ ${err.message}`, "err");
+    }
+    e.target.value = "";
+  };
+
+  const removeScanPhoto = (idx) => {
+    setScanPhotos(prev => {
+      const next = prev.filter((_, i) => i !== idx);
+      if (scanPhoto === prev[idx]) setScanPhoto(next[next.length - 1] || null);
+      return next;
+    });
+    setScanPhotosB64(prev => prev.filter((_, i) => i !== idx));
+    setScanResults(null);
+  };
+
+  const clearScanPhotos = () => {
+    setScanPhotos([]); setScanPhotosB64([]); setScanPhoto(null); setScanResults(null);
+  };
+
+  // ─── ANALYZE ALL PHOTOS (multi-image fusion) ───
+  const analyzeScanPhotos = async () => {
+    if (scanPhotosB64.length === 0 && !GEMINI_API_KEY) {
+      // Demo even without photos
+    } else if (scanPhotosB64.length === 0) {
+      flash("❌ Tambahkan minimal 1 foto dulu.", "err"); return;
+    }
+    setScanResults(null);
+    setScanning(true);
+    try {
       if (!GEMINI_API_KEY) {
-        // Demo fallback
         await new Promise(r => setTimeout(r, 1500));
         const demoItems = effectivePrices.slice(0, 3).map((p, i) => ({
           item: p.name, code: p.item_code, cat: p.category,
@@ -1037,17 +1088,20 @@ export default function EcoChain() {
         }));
         setScanResults({ label: "Demo Scan (tanpa API key)", results: demoItems });
       } else {
-        const prompt = buildWastePrompt(effectivePrices);
-        const apiRes = await callGeminiVision(base64, prompt);
+        const prompt = buildWastePrompt(effectivePrices, scanPhotosB64.length);
+        const model = hiAccuracy ? GEMINI_MODEL_ACCURATE : GEMINI_MODEL_FAST;
+        const apiRes = await callGeminiVision(scanPhotosB64, prompt, { model });
         const parsed = parseGeminiResponse(apiRes, effectivePrices);
         setScanResults(parsed || { label: "Tidak terdeteksi", results: [] });
+        if (parsed?.results?.length) {
+          flash(`✅ ${parsed.results.length} item terdeteksi dari ${scanPhotosB64.length} foto${hiAccuracy ? " (Pro)" : ""}`);
+        }
       }
     } catch (err) {
       flash(`❌ Scan error: ${err.message}`, "err");
       setScanResults(null);
     }
     setScanning(false);
-    e.target.value = "";
   };
 
   // ─── COMPUTED: effectivePrices ───
@@ -2731,24 +2785,55 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                   </div>
                 )}
 
-                <div className="c" style={{ padding: 24, textAlign: "center" }}>
+                <div className="c" style={{ padding: 20, textAlign: "center" }}>
                   <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageCapture} style={{ display: "none" }} />
-                  <button className="bt" onClick={() => fileInputRef.current?.click()} disabled={scanning}
-                    style={{ padding: "18px 32px", fontSize: 15, fontWeight: 700, background: scanning ? "rgba(255,255,255,.04)" : "linear-gradient(135deg,#22C55E,#06B6D4)", color: scanning ? "var(--t2)" : "#fff", border: "none" }}>
-                    {scanning ? "⏳ Menganalisis..." : "📷 Ambil Foto Sampah"}
-                  </button>
-                  <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 8 }}>Arahkan kamera ke tumpukan sampah</div>
+
+                  <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                    <button className="bt" onClick={() => fileInputRef.current?.click()} disabled={scanning || scanPhotos.length >= 5}
+                      style={{ padding: "14px 22px", fontSize: 13, fontWeight: 700, background: scanning || scanPhotos.length >= 5 ? "rgba(255,255,255,.04)" : "linear-gradient(135deg,#22C55E,#06B6D4)", color: scanning || scanPhotos.length >= 5 ? "var(--t2)" : "#fff", border: "none" }}>
+                      📷 {scanPhotos.length === 0 ? "Ambil Foto" : `Tambah Foto (${scanPhotos.length}/5)`}
+                    </button>
+                    {scanPhotos.length > 0 && (
+                      <button className="bt" onClick={analyzeScanPhotos} disabled={scanning}
+                        style={{ padding: "14px 22px", fontSize: 13, fontWeight: 700, background: scanning ? "rgba(255,255,255,.04)" : "linear-gradient(135deg,#A855F7,#EC4899)", color: scanning ? "var(--t2)" : "#fff", border: "none" }}>
+                        {scanning ? "⏳ Menganalisis..." : `🔍 Analisis ${scanPhotos.length} foto${hiAccuracy ? " (Pro)" : ""}`}
+                      </button>
+                    )}
+                    {scanPhotos.length > 0 && (
+                      <button className="bt" onClick={clearScanPhotos} disabled={scanning}
+                        style={{ padding: "14px 16px", fontSize: 12, fontWeight: 600, background: "rgba(239,68,68,.08)", color: "var(--r)", border: "1px solid rgba(239,68,68,.2)" }}>
+                        🗑 Reset
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: 10, color: "var(--t2)", marginTop: 10 }}>
+                    {scanPhotos.length === 0
+                      ? "Ambil 1-5 foto dari sudut berbeda untuk akurasi lebih tinggi."
+                      : `${scanPhotos.length} foto siap. Ambil lagi dari sudut lain, lalu klik Analisis.`}
+                  </div>
+
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, cursor: "pointer", fontSize: 11, color: hiAccuracy ? "var(--p)" : "var(--t2)" }}>
+                    <input type="checkbox" checked={hiAccuracy} onChange={e => setHiAccuracy(e.target.checked)} disabled={scanning} style={{ width: "auto", margin: 0 }} />
+                    ⚡ High Accuracy (Gemini 2.5 Pro — lebih akurat, lebih lambat)
+                  </label>
 
                   {scanPhoto && (
-                    <div style={{ marginTop: 16 }}>
+                    <div style={{ marginTop: 14 }}>
                       <img src={scanPhoto} alt="Scan" style={{ maxWidth: "100%", maxHeight: 240, borderRadius: 12, border: "1px solid var(--bdr)" }} />
                     </div>
                   )}
-                  {/* Multi-photo gallery */}
-                  {scanPhotos.length > 1 && (
-                    <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", paddingBottom: 4 }}>
+                  {scanPhotos.length > 0 && (
+                    <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", paddingBottom: 4, justifyContent: scanPhotos.length < 4 ? "center" : "flex-start" }}>
                       {scanPhotos.map((photo, i) => (
-                        <img key={i} src={photo} alt={`Scan ${i + 1}`} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8, border: photo === scanPhoto ? "2px solid var(--g)" : "1px solid var(--bdr)", cursor: "pointer", opacity: photo === scanPhoto ? 1 : 0.6 }} onClick={() => setScanPhoto(photo)} />
+                        <div key={i} style={{ position: "relative", flexShrink: 0 }}>
+                          <img src={photo} alt={`Scan ${i + 1}`}
+                            onClick={() => setScanPhoto(photo)}
+                            style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, border: photo === scanPhoto ? "2px solid var(--g)" : "1px solid var(--bdr)", cursor: "pointer", opacity: photo === scanPhoto ? 1 : 0.65 }} />
+                          <button type="button" onClick={(e) => { e.stopPropagation(); removeScanPhoto(i); }}
+                            title="Hapus foto"
+                            style={{ position: "absolute", top: -4, right: -4, width: 18, height: 18, borderRadius: "50%", background: "var(--r)", color: "#fff", border: "2px solid var(--bg)", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}>×</button>
+                        </div>
                       ))}
                     </div>
                   )}
