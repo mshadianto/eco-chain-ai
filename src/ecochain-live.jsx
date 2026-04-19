@@ -79,6 +79,19 @@ const sb = {
     });
     return r.json();
   },
+  async resetPassword(email, redirectTo) {
+    const body = redirectTo ? { email, options: { redirectTo } } : { email };
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      throw new Error(data.msg || data.error_description || `Reset gagal (${r.status})`);
+    }
+    return r.json().catch(() => ({}));
+  },
 };
 
 // ─── GEMINI VISION HELPERS ───
@@ -400,6 +413,12 @@ export default function EcoChain() {
   const [authForm, setAuthForm] = useState({ email: "", password: "", confirmPassword: "", name: "", role: "user", location: "" });
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState("");
 
   // ─── DATA STATE ───
   const [pelapakPrices, setPelapakPrices] = useState([]);
@@ -757,6 +776,23 @@ export default function EcoChain() {
       setAuthError(err.message);
     }
     setAuthLoading(false);
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotMsg("");
+    if (!forgotEmail || !/.+@.+\..+/.test(forgotEmail)) {
+      setForgotMsg("❌ Masukkan email yang valid.");
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      await sb.resetPassword(forgotEmail.trim(), typeof window !== "undefined" ? window.location.origin : undefined);
+      setForgotMsg(`✅ Link reset password telah dikirim ke ${forgotEmail}. Silakan cek inbox/spam.`);
+    } catch (err) {
+      setForgotMsg(`❌ ${err.message}`);
+    }
+    setForgotLoading(false);
   };
 
   const logout = () => {
@@ -2037,6 +2073,32 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
             </div>
 
             <div className="c" style={{ padding: 28 }}>
+              {forgotMode ? (
+                <>
+                  <div style={{ marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: "var(--d)", color: "var(--w)", marginBottom: 4 }}>🔑 Lupa Password</h3>
+                    <p style={{ fontSize: 11, color: "var(--t2)" }}>Masukkan email akun Anda. Kami akan kirim link untuk reset password.</p>
+                  </div>
+                  {forgotMsg && (
+                    <div style={{ padding: "10px 14px", borderRadius: 10, background: forgotMsg.startsWith("✅") ? "rgba(34,197,94,.1)" : "rgba(239,68,68,.1)", border: `1px solid ${forgotMsg.startsWith("✅") ? "rgba(34,197,94,.2)" : "rgba(239,68,68,.2)"}`, color: forgotMsg.startsWith("✅") ? "var(--g)" : "var(--r)", fontSize: 12, marginBottom: 14 }}>{forgotMsg}</div>
+                  )}
+                  <form onSubmit={handleForgotPassword}>
+                    <div style={{ marginBottom: 14 }}>
+                      <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>Email</label>
+                      <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="email@example.com" required />
+                    </div>
+                    <button type="submit" className="bt" disabled={forgotLoading}
+                      style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg,#22C55E,#16A34A)", color: "#fff", fontWeight: 700, fontSize: 14, opacity: forgotLoading ? .6 : 1, marginBottom: 10 }}>
+                      {forgotLoading ? "⏳ Mengirim..." : "Kirim Link Reset"}
+                    </button>
+                    <button type="button" className="bt" onClick={() => { setForgotMode(false); setForgotMsg(""); setForgotEmail(""); }}
+                      style={{ width: "100%", padding: "10px", background: "transparent", color: "var(--t2)", fontSize: 12, border: "1px solid var(--bdr)" }}>
+                      ← Kembali ke Login
+                    </button>
+                  </form>
+                </>
+              ) : (
+              <>
               {/* Login/Register toggle */}
               <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "rgba(255,255,255,.03)", borderRadius: 10, padding: 3 }}>
                 {["login", "register"].map(m => (
@@ -2064,13 +2126,27 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>Password</label>
-                  <input type="password" value={authForm.password} onChange={e => setAuthForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" required minLength={6} />
+                  <div style={{ position: "relative" }}>
+                    <input type={showPassword ? "text" : "password"} value={authForm.password} onChange={e => setAuthForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" required minLength={6} style={{ paddingRight: 44 }} />
+                    <button type="button" onClick={() => setShowPassword(v => !v)}
+                      title={showPassword ? "Sembunyikan password" : "Lihat password"}
+                      style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: 16, color: "var(--t2)", padding: 4 }}>
+                      {showPassword ? "🙈" : "👁️"}
+                    </button>
+                  </div>
                 </div>
 
                 {authMode === "register" && (
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ fontSize: 11, color: "var(--t2)", marginBottom: 4, display: "block" }}>Konfirmasi Password</label>
-                    <input type="password" value={authForm.confirmPassword} onChange={e => setAuthForm(f => ({ ...f, confirmPassword: e.target.value }))} placeholder="••••••••" required minLength={6} />
+                    <div style={{ position: "relative" }}>
+                      <input type={showConfirmPassword ? "text" : "password"} value={authForm.confirmPassword} onChange={e => setAuthForm(f => ({ ...f, confirmPassword: e.target.value }))} placeholder="••••••••" required minLength={6} style={{ paddingRight: 44 }} />
+                      <button type="button" onClick={() => setShowConfirmPassword(v => !v)}
+                        title={showConfirmPassword ? "Sembunyikan password" : "Lihat password"}
+                        style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: 16, color: "var(--t2)", padding: 4 }}>
+                        {showConfirmPassword ? "🙈" : "👁️"}
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -2120,7 +2196,17 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
                   style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg,#22C55E,#16A34A)", color: "#fff", fontWeight: 700, fontSize: 14, opacity: authLoading ? .6 : 1 }}>
                   {authLoading ? "⏳ Mohon tunggu..." : authMode === "login" ? "Masuk" : "Daftar"}
                 </button>
+                {authMode === "login" && (
+                  <div style={{ textAlign: "center", marginTop: 12 }}>
+                    <button type="button" onClick={() => { setForgotMode(true); setForgotMsg(""); setForgotEmail(authForm.email || ""); setAuthError(""); }}
+                      style={{ background: "transparent", border: "none", color: "var(--g)", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 4 }}>
+                      🔑 Lupa password?
+                    </button>
+                  </div>
+                )}
               </form>
+              </>
+              )}
             </div>
 
             {/* Public price preview */}
