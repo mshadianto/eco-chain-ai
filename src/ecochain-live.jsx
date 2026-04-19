@@ -13,7 +13,9 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // ─── GEMINI VISION AI CONFIG ───
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_KEY || "";
-const GEMINI_MODEL_FAST = "gemini-2.5-flash";
+// Default: flash-lite (~6× lebih murah dari 2.5-flash, arsitektur lebih baru dari 2.0).
+// High Accuracy: 2.5-pro untuk kasus ambigu.
+const GEMINI_MODEL_FAST = "gemini-2.5-flash-lite";
 const GEMINI_MODEL_ACCURATE = "gemini-2.5-pro";
 const geminiUrl = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -2815,7 +2817,7 @@ Jawab pertanyaan user berdasarkan data di atas. Jika user tanya harga, tampilkan
 
                   <label style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, cursor: "pointer", fontSize: 11, color: hiAccuracy ? "var(--p)" : "var(--t2)" }}>
                     <input type="checkbox" checked={hiAccuracy} onChange={e => setHiAccuracy(e.target.checked)} disabled={scanning} style={{ width: "auto", margin: 0 }} />
-                    ⚡ High Accuracy (Gemini 2.5 Pro — lebih akurat, lebih lambat)
+                    ⚡ High Accuracy (Gemini 2.5 Pro — 20× lebih mahal, untuk kasus ambigu)
                   </label>
 
                   {scanPhoto && (
